@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import { handleExpressHandlerError } from 'middleware/errorHandler'
 import AuthController from '../controller/authController'
 import { isAuthenticated } from '../middleware/auth'
 import AuthService from '../service/authService'
@@ -11,12 +10,12 @@ const authController = new AuthController(authService)
 
 const router = Router()
 
-router.post('/login', handleExpressHandlerError(authController.login))
+router.post('/login', authController.login)
 router.delete(
   '/logout',
   isAuthenticated,
-  handleExpressHandlerError(authController.logout)
+  authController.logout
 )
-router.post('/register', handleExpressHandlerError(authController.register))
+router.post('/register', authController.register)
 
 export default router

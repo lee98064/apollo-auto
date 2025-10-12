@@ -44,7 +44,7 @@ export default class AuthService {
       },
     })
 
-    this.prisma.token.create({
+    await this.prisma.token.create({
       data: {
         userId: user.id,
         token,
@@ -91,7 +91,7 @@ export default class AuthService {
       },
     })
 
-    this.prisma.token.create({
+    await this.prisma.token.create({
       data: {
         userId: newUser.id,
         token,

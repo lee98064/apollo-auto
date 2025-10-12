@@ -1,15 +1,6 @@
 import type { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
-import {
-  BadRequestError,
-  ConflictError,
-  createErrorResponse,
-  ForbiddenError,
-  MethodNotAllowedError,
-  NotFoundError,
-  UnauthorizedError,
-  UnprocessableEntityError,
-} from '../dto/response'
+import { BaseError, createErrorResponse } from '../dto/response'
 
 type ValidationErrorDetail = {
   path?: string | (string | number)[]
@@ -51,64 +42,12 @@ function formatValidationMessage(
     .join(', ')
 }
 
-type ErrorHandlerConfig = {
-  check: (err: Error) => boolean
-  status: StatusCodes
-  errorCode: StatusCodes
-  message: (err: Error) => string
-}
-
-const errorHandlers: ErrorHandlerConfig[] = [
-  {
-    check: (err) => err instanceof BadRequestError,
-    status: StatusCodes.BAD_REQUEST,
-    errorCode: StatusCodes.BAD_REQUEST,
-    message: (err) => `Bad request, message: ${err.message}`,
-  },
-  {
-    check: (err) => err instanceof UnauthorizedError,
-    status: StatusCodes.UNAUTHORIZED,
-    errorCode: StatusCodes.UNAUTHORIZED,
-    message: (err) => `Unauthorized, message: ${err.message}`,
-  },
-  {
-    check: (err) => err instanceof ForbiddenError,
-    status: StatusCodes.FORBIDDEN,
-    errorCode: StatusCodes.FORBIDDEN,
-    message: (err) => `Forbidden, message: ${err.message}`,
-  },
-  {
-    check: (err) => err instanceof NotFoundError,
-    status: StatusCodes.NOT_FOUND,
-    errorCode: StatusCodes.NOT_FOUND,
-    message: (err) => `Not found, message: ${err.message}`,
-  },
-  {
-    check: (err) => err instanceof MethodNotAllowedError,
-    status: StatusCodes.METHOD_NOT_ALLOWED,
-    errorCode: StatusCodes.METHOD_NOT_ALLOWED,
-    message: (err) => `Method not allowed, message: ${err.message}`,
-  },
-  {
-    check: (err) => err instanceof UnprocessableEntityError,
-    status: StatusCodes.UNPROCESSABLE_ENTITY,
-    errorCode: StatusCodes.UNPROCESSABLE_ENTITY,
-    message: (err) => `Unprocessable entity, message: ${err.message}`,
-  },
-  {
-    check: (err) => err instanceof ConflictError,
-    status: StatusCodes.CONFLICT,
-    errorCode: StatusCodes.CONFLICT,
-    message: (err) => `Conflict, message: ${err.message}`,
-  },
-]
-
 class GlobalErrorHandler {
   handleError = (
     err: Error,
     req: Request,
     res: Response,
-    next: NextFunction
+    _next: NextFunction
   ): void => {
     if (isOpenApiValidationError(err)) {
       res
@@ -122,13 +61,32 @@ class GlobalErrorHandler {
       return
     }
 
-    for (const handler of errorHandlers) {
-      if (handler.check(err)) {
-        res
-          .status(handler.status)
-          .send(createErrorResponse(handler.errorCode, handler.message(err)))
-        return
-      }
+    if (err instanceof BaseError) {
+      res
+        .status(err.code)
+        .send(createErrorResponse(err.code, err.message))
+      return
+    }
+
+    const anyErr = err as { status?: number; statusCode?: number; message?: string }
+
+    const fallbackStatus =
+      typeof anyErr.status === 'number'
+        ? anyErr.status
+        : typeof anyErr.statusCode === 'number'
+          ? anyErr.statusCode
+          : undefined
+
+    if (fallbackStatus && fallbackStatus >= 400 && fallbackStatus <= 599) {
+      res
+        .status(fallbackStatus)
+        .send(
+          createErrorResponse(
+            fallbackStatus as StatusCodes,
+            anyErr.message || 'Request failed'
+          )
+        )
+      return
     }
 
     console.error('Unhandled error:', {
@@ -146,32 +104,7 @@ class GlobalErrorHandler {
           'Internal server error'
         )
       )
-    next()
   }
 }
 
 export const errorHandler = new GlobalErrorHandler()
-
-export function handleExpressHandlerError<
-  P = unknown,
-  ResBody = unknown,
-  ReqBody = unknown,
-  ReqQuery = unknown,
->(
-  handler: (
-    req: Request<P, ResBody, ReqBody, ReqQuery>,
-    res: Response
-  ) => Promise<void>
-) {
-  return async (
-    req: Request<P, ResBody, ReqBody, ReqQuery>,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      await handler(req, res)
-    } catch (err) {
-      next(err)
-    }
-  }
-}

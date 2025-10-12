@@ -11,17 +11,17 @@ const isAuthenticated = async (
   _res: Response,
   next: NextFunction
 ) => {
+  const authHeader = req.headers.authorization ?? ''
+  const [, token] = authHeader.split(' ')
+
+  if (!token) {
+    return next(new UnauthorizedError('Unauthorized'))
+  }
+
   try {
-    const authHeader = req.headers.authorization ?? ''
-    const [, token] = authHeader.split(' ')
-
-    if (!token) {
-      throw new UnauthorizedError('Unauthorized')
-    }
-
     const isLoggedIn = await authService.isLoginIn(token)
     if (!isLoggedIn) {
-      throw new UnauthorizedError('Unauthorized')
+      return next(new UnauthorizedError('Unauthorized'))
     }
 
     const payload = jwt.verifyAccessToken(token)
@@ -30,8 +30,9 @@ const isAuthenticated = async (
     req.user = payload.user
 
     return next()
-  } catch {
-    throw new UnauthorizedError('Unauthorized')
+  } catch (err) {
+    console.error(err)
+    return next(new UnauthorizedError('Unauthorized'))
   }
 }
 

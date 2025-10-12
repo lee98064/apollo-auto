@@ -36,10 +36,8 @@ export const verifyAccessToken = (token: string): JwtPayload => {
 
 export const isTokenExpired = (token: string): boolean => {
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload & {
-      exp: number
-    }
-    return decoded.exp * 1000 < Date.now()
+    verifyAccessToken(token)
+    return false
   } catch {
     return true
   }

@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import { handleExpressHandlerError } from 'middleware/errorHandler'
 import CookieController from 'controller/cookieController'
 import CookieService from 'service/cookieService'
 import { isAuthenticated } from 'middleware/auth'
@@ -12,10 +11,7 @@ const router = Router()
 
 router.use(isAuthenticated)
 
-router.get('/cookies', handleExpressHandlerError(cookieController.getCookie))
-router.put(
-  '/cookies',
-  handleExpressHandlerError(cookieController.upsertCookie)
-)
+router.get('/cookies', cookieController.getCookie)
+router.put('/cookies', cookieController.upsertCookie)
 
 export default router

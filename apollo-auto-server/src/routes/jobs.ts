@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import { handleExpressHandlerError } from 'middleware/errorHandler'
 import JobController from 'controller/jobController'
 import JobService from 'service/jobService'
 import { isAuthenticated } from 'middleware/auth'
@@ -12,11 +11,8 @@ const router = Router()
 
 router.use(isAuthenticated)
 
-router.get('/jobs', handleExpressHandlerError(jobController.listJobs))
-router.post('/jobs', handleExpressHandlerError(jobController.createJob))
-router.put(
-  '/jobs/:jobId',
-  handleExpressHandlerError(jobController.updateJob)
-)
+router.get('/jobs', jobController.listJobs)
+router.post('/jobs', jobController.createJob)
+router.put('/jobs/:jobId', jobController.updateJob)
 
 export default router
