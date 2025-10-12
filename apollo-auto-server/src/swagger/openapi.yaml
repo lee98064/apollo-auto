@@ -419,6 +419,10 @@ components:
           type: string
           format: date-time
           nullable: true
+        data:
+          type: string
+          nullable: true
+          description: Optional JSON string payload for the job.
         isActive:
           type: boolean
         expiredAt:
@@ -437,6 +441,10 @@ components:
           type: string
           format: date-time
           nullable: true
+        data:
+          type: string
+          nullable: true
+          description: Optional JSON string payload for the job.
         isActive:
           type: boolean
         expiredAt:

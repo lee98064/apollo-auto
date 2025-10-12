@@ -13,6 +13,7 @@ type CreateJobInput = {
   endAt?: Date | null
   isActive?: boolean
   expiredAt?: Date | null
+  data?: string | null
 }
 
 type UpdateJobInput = {
@@ -23,6 +24,7 @@ type UpdateJobInput = {
   endAt?: Date | null
   isActive?: boolean
   expiredAt?: Date | null
+  data?: string | null
 }
 
 export default class JobService {
@@ -42,6 +44,7 @@ export default class JobService {
     endAt,
     isActive,
     expiredAt,
+    data,
   }: CreateJobInput): Promise<Job> {
     return this.prisma.job.create({
       data: {
@@ -52,6 +55,7 @@ export default class JobService {
         isActive: isActive ?? true,
         expiredAt: expiredAt ?? null,
         nextExecutionAt: startAt,
+        data: data ?? null,
       },
     })
   }
@@ -64,6 +68,7 @@ export default class JobService {
     endAt,
     isActive,
     expiredAt,
+    data,
   }: UpdateJobInput): Promise<Job> {
     const existingJob = await this.prisma.job.findUnique({
       where: { id: jobId },
@@ -73,32 +78,36 @@ export default class JobService {
       throw new NotFoundError('Job not found.')
     }
 
-    const data: Prisma.JobUpdateInput = {}
+    const updateData: Prisma.JobUpdateInput = {}
 
     if (typeof type !== 'undefined') {
-      data.type = type
+      updateData.type = type
     }
 
     if (typeof startAt !== 'undefined') {
-      data.startAt = startAt
-      data.nextExecutionAt = startAt
+      updateData.startAt = startAt
+      updateData.nextExecutionAt = startAt
     }
 
     if (typeof endAt !== 'undefined') {
-      data.endAt = endAt ?? null
+      updateData.endAt = endAt ?? null
     }
 
     if (typeof isActive !== 'undefined') {
-      data.isActive = isActive
+      updateData.isActive = isActive
     }
 
     if (typeof expiredAt !== 'undefined') {
-      data.expiredAt = expiredAt ?? null
+      updateData.expiredAt = expiredAt ?? null
+    }
+
+    if (typeof data !== 'undefined') {
+      updateData.data = data ?? null
     }
 
     return this.prisma.job.update({
       where: { id: jobId },
-      data,
+      data: updateData,
     })
   }
 }
