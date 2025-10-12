@@ -62,6 +62,158 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /jobs:
+    get:
+      tags:
+        - jobs
+      summary: List jobs for the authenticated user
+      operationId: listJobs
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Jobs fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListJobsSuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - jobs
+      summary: Create a job for the authenticated user
+      operationId: createJob
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobRequest"
+      responses:
+        "201":
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSuccessResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /jobs/{jobId}:
+    put:
+      tags:
+        - jobs
+      summary: Update a job
+      operationId: updateJob
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJobRequest"
+      responses:
+        "200":
+          description: Job updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobSuccessResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /cookies:
+    get:
+      tags:
+        - cookies
+      summary: Retrieve the stored Apollo cookie
+      operationId: getCookie
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Cookie fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CookieSuccessResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags:
+        - cookies
+      summary: Create or update the Apollo cookie
+      operationId: upsertCookie
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertCookieRequest"
+      responses:
+        "200":
+          description: Cookie saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CookieSuccessResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     LoginRequest:
@@ -197,3 +349,155 @@ components:
               format: int32
             message:
               type: string
+    JobType:
+      type: string
+      enum:
+        - CHECK_IN
+        - CHECK_OUT
+    Job:
+      type: object
+      required:
+        - id
+        - userId
+        - type
+        - startAt
+        - nextExecutionAt
+        - isActive
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        userId:
+          type: integer
+          format: int32
+        type:
+          $ref: "#/components/schemas/JobType"
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+          nullable: true
+        data:
+          type: string
+          nullable: true
+          description: Optional JSON string payload for the job.
+        nextExecutionAt:
+          type: string
+          format: date-time
+        lastExecutedAt:
+          type: string
+          format: date-time
+          nullable: true
+        isActive:
+          type: boolean
+        expiredAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateJobRequest:
+      type: object
+      required:
+        - type
+        - startAt
+      properties:
+        type:
+          $ref: "#/components/schemas/JobType"
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+          nullable: true
+        isActive:
+          type: boolean
+        expiredAt:
+          type: string
+          format: date-time
+          nullable: true
+    UpdateJobRequest:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/JobType"
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+          nullable: true
+        isActive:
+          type: boolean
+        expiredAt:
+          type: string
+          format: date-time
+          nullable: true
+    JobSuccessResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - type: object
+          required:
+            - result
+          properties:
+            result:
+              type: object
+              required:
+                - job
+              properties:
+                job:
+                  $ref: "#/components/schemas/Job"
+    ListJobsSuccessResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - type: object
+          required:
+            - result
+          properties:
+            result:
+              type: object
+              required:
+                - jobs
+              properties:
+                jobs:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Job"
+    UpsertCookieRequest:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+          minLength: 1
+    CookieSuccessResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - type: object
+          required:
+            - result
+          properties:
+            result:
+              type: object
+              required:
+                - value
+              properties:
+                value:
+                  type: string
+                  nullable: true
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
