@@ -1,0 +1,7 @@
+{
+  "watch": ["src/"],
+  "ext": "ts",
+  "execMap": {
+    "ts": "DOTENV_CONFIG_PATH=.env ts-node --files -r tsconfig-paths/register -r dotenv/config"
+  }
+}

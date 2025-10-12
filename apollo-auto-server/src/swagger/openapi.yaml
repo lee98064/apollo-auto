@@ -1,0 +1,199 @@
+openapi: 3.1.0
+info:
+  title: Apollo Auto API
+  description: API documentation for the Apollo Auto backend.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+paths:
+  /login:
+    post:
+      tags:
+        - auth
+      summary: Authenticate a user
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginSuccessResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /register:
+    post:
+      tags:
+        - auth
+      summary: Register a new user
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterSuccessResponse"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - account
+        - password
+      properties:
+        account:
+          type: string
+          description: User account identifier.
+          example: johndoe
+        password:
+          type: string
+          description: User password.
+          format: password
+          example: secretPass123
+    RegisterRequest:
+      type: object
+      required:
+        - account
+        - password
+        - displayName
+      properties:
+        account:
+          type: string
+          description: Desired account identifier.
+          example: johndoe
+        password:
+          type: string
+          description: Password that will be stored encrypted.
+          format: password
+          example: secretPass123
+        displayName:
+          type: string
+          description: Name displayed to other users.
+          example: John Doe
+        timezone:
+          type: string
+          description: IANA timezone identifier. Defaults to `Asia/Taipei` when omitted.
+          example: Asia/Taipei
+    SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          const: true
+        result:
+          description: Payload returned by the request.
+    AuthPayload:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          description: JWT access token for subsequent authenticated requests.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: "#/components/schemas/User"
+    LoginSuccessResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - type: object
+          required:
+            - result
+          properties:
+            result:
+              $ref: "#/components/schemas/AuthPayload"
+    RegisterSuccessResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - type: object
+          required:
+            - result
+          properties:
+            result:
+              $ref: "#/components/schemas/AuthPayload"
+    User:
+      type: object
+      required:
+        - id
+        - account
+        - password
+        - displayName
+        - timezone
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        account:
+          type: string
+          example: johndoe
+        password:
+          type: string
+          description: Hashed password stored by the system.
+          example: $2b$10$abcdefghijklmnopqrstuv
+        displayName:
+          type: string
+          example: John Doe
+        timezone:
+          type: string
+          example: Asia/Taipei
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string

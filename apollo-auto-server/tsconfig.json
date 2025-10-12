@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "removeComments": true,
+    "outDir": "./build/",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "types": ["dayjs/plugin/timezone", "node", "jest"],
+    "baseUrl": "./src",
+    "lib": ["ES6"],
+    "downlevelIteration": true
+  },
+  "include": ["src/**/*"],
+  "typeRoots": ["node_modules/@types", "src/types"],
+  "exclude": ["node_modules", "build"]
+}

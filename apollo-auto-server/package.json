@@ -1,0 +1,36 @@
+{
+  "name": "apollo-auto-server",
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "scripts": {
+    "dev": "NODE_ENV=dev nodemon ./src/index.ts",
+    "db:dev": "prisma migrate dev --schema ./src/prisma/schema.prisma",
+    "db:generate": "prisma generate --schema ./src/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "6.17.1",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "envalid": "^8.1.0",
+    "express": "^5.1.0",
+    "express-openapi-validator": "^5.6.0",
+    "http-status-codes": "^2.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-schedule": "^2.1.1",
+    "prisma": "^6.17.1",
+    "swagger-ui-express": "^5.0.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.3",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.5",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.7.2",
+    "dotenv": "^17.2.3",
+    "nodemon": "^3.1.10"
+  }
+}
