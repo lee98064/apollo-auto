@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcrypt'
-import { UnauthorizedError } from '../dto/response'
+import { ConflictError, UnauthorizedError } from '../dto/response'
 import jwt from '../utils/jwt'
 
 type RegisterParams = {
@@ -67,7 +67,7 @@ export default class AuthService {
       where: { account },
     })
     if (existingUser) {
-      throw new Error('Account already exists.')
+      throw new ConflictError('Account already exists.')
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)

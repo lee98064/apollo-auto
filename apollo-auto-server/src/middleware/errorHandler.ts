@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import {
   BadRequestError,
+  ConflictError,
   createErrorResponse,
   ForbiddenError,
   MethodNotAllowedError,
@@ -93,6 +94,12 @@ const errorHandlers: ErrorHandlerConfig[] = [
     status: StatusCodes.UNPROCESSABLE_ENTITY,
     errorCode: StatusCodes.UNPROCESSABLE_ENTITY,
     message: (err) => `Unprocessable entity, message: ${err.message}`,
+  },
+  {
+    check: (err) => err instanceof ConflictError,
+    status: StatusCodes.CONFLICT,
+    errorCode: StatusCodes.CONFLICT,
+    message: (err) => `Conflict, message: ${err.message}`,
   },
 ]
 

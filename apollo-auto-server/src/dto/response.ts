@@ -67,6 +67,12 @@ export class UnprocessableEntityError extends BaseError {
   }
 }
 
+export class ConflictError extends BaseError {
+  constructor(message: string) {
+    super(StatusCodes.CONFLICT, message)
+  }
+}
+
 export function createSuccessResponse<T>(result?: T): Response<T> {
   return {
     success: true,

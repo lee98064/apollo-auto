@@ -9,9 +9,13 @@ export default class AuthController {
   login = async (req: Request, res: Response) => {
     const { account, password } = req.body
 
-    const result = await this.authService.login(account, password)
+    const { token } = await this.authService.login(account, password)
 
-    res.json(createSuccessResponse(result))
+    res.json(
+      createSuccessResponse({
+        token,
+      })
+    )
   }
 
   logout = async (req: Request, res: Response) => {
@@ -33,13 +37,17 @@ export default class AuthController {
   register = async (req: Request, res: Response) => {
     const { account, password, displayName, timezone } = req.body
 
-    const result = await this.authService.register({
+    const { token } = await this.authService.register({
       account,
       password,
       displayName,
       timezone,
     })
 
-    res.json(createSuccessResponse(result))
+    res.json(
+      createSuccessResponse({
+        token,
+      })
+    )
   }
 }

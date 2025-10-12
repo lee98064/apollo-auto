@@ -21,4 +21,4 @@ const isAuthenticated = (req: Request, _res: Response, next: NextFunction) => {
   return next(new UnauthorizedError('Unauthorized'))
 }
 
-export default { isAuthenticated }
+export { isAuthenticated }
