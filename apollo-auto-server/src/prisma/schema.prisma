@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  account     String   @unique
-  password    String
-  displayName String
-  timezone    String   @default("Asia/Taipei")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  Token       Token[]
+  id           Int            @id @default(autoincrement())
+  account      String         @unique
+  password     String
+  displayName  String
+  timezone     String         @default("Asia/Taipei")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Token        Token[]
+  Job          Job[]
+  ApolloCookie ApolloCookie[]
 }
 
 model Token {
@@ -28,4 +30,39 @@ model Token {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model ApolloCookie {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum JobType {
+  CHECK_IN
+  CHECK_OUT
+}
+
+model Job {
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  type           JobType
+  startAt        DateTime
+  endAt          DateTime?
+  data           String? // JSON string
+  lastExecutedAt DateTime?
+  isActive       Boolean   @default(true)
+  expiredAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
 }
