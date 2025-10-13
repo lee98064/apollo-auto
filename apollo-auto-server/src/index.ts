@@ -29,9 +29,11 @@ Object.values(routes).forEach((route) => {
 
 app.use(errorHandler.handleError)
 
-// new JobManager()
+new JobManager()
 app.listen(process.env.PORT || 5566)
 
-console.log(`[Apollo-Server] Server is running on port ${process.env.PORT || 5566}`)
+console.log(
+  `[Apollo-Server] Server is running on port ${process.env.PORT || 5566}`
+)
 console.log(`[Apollo-Server] http://localhost:${process.env.PORT || 5566}/api`)
 console.log(`[Apollo-Server] http://localhost:${process.env.PORT || 5566}/docs`)

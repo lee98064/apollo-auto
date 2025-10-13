@@ -35,7 +35,7 @@ model Token {
 model ApolloCookie {
   id        Int      @id @default(autoincrement())
   userId    Int      @unique
-  value     String
+  value     String // JSON string
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -49,19 +49,28 @@ enum JobType {
   CHECK_OUT
 }
 
+enum JobStatus {
+  SUCCESS
+  FAILED
+  SKIPPED
+  PENDING
+}
+
 model Job {
-  id              Int       @id @default(autoincrement())
-  userId          Int
-  type            JobType
-  startAt         DateTime
-  endAt           DateTime?
-  data            String? // JSON string
-  nextExecutionAt DateTime
-  lastExecutedAt  DateTime?
-  isActive        Boolean   @default(true)
-  expiredAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                  Int        @id @default(autoincrement())
+  userId              Int
+  type                JobType
+  startAt             DateTime
+  endAt               DateTime?
+  data                String? // JSON string
+  nextExecutionAt     DateTime?
+  lastExecutedAt      DateTime?
+  lastExecutionStatus JobStatus?
+  lastExecutionResult String? // JSON string
+  isActive            Boolean    @default(true)
+  expiredAt           DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
