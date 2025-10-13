@@ -1,9 +1,5 @@
 import type { JobType } from '@prisma/client'
-import {
-  BadRequestError,
-  createSuccessResponse,
-  UnauthorizedError,
-} from 'dto/response'
+import { BadRequestError, createSuccessResponse } from 'dto/response'
 import type { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import type JobService from 'service/jobService'
@@ -42,9 +38,7 @@ const parseOptionalDate = (
   return parseDate(value, field)
 }
 
-const parseData = (
-  value: unknown
-): string | null | undefined => {
+const parseData = (value: unknown): string | null | undefined => {
   if (typeof value === 'undefined') {
     return undefined
   }

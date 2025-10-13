@@ -1,7 +1,7 @@
-import { Router } from 'express'
 import JobController from 'controller/jobController'
-import JobService from 'service/jobService'
+import { Router } from 'express'
 import { isAuthenticated } from 'middleware/auth'
+import JobService from 'service/jobService'
 import prisma from 'utils/prisma'
 
 const jobService = new JobService(prisma)
