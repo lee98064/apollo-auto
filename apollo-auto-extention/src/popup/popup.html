@@ -5,32 +5,181 @@
     <meta charset="utf-8">
     <style>
         body {
-            width: 350px;
-            padding: 16px;
+            width: 380px;
+            padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
+            background: #f5f5f5;
+        }
+
+        .page {
+            display: none;
+            min-height: 400px;
+            background: white;
+        }
+
+        .page.active {
+            display: block;
         }
 
         .header {
+            background: #1a73e8;
+            color: white;
+            padding: 16px;
             text-align: center;
-            margin-bottom: 20px;
+            position: relative;
         }
 
         .header h1 {
             margin: 0;
-            color: #1a73e8;
             font-size: 18px;
         }
 
-        .section {
-            margin-bottom: 20px;
+        .header .settings-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px;
+            border-radius: 4px;
         }
 
-        .section-title {
-            font-size: 14px;
-            font-weight: 600;
+        .header .settings-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
             color: #202124;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+
+        .button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
             margin-bottom: 8px;
+        }
+
+        .button:hover {
+            background: #1557b0;
+        }
+
+        .button:disabled {
+            background: #dadce0;
+            color: #5f6368;
+            cursor: not-allowed;
+        }
+
+        .button.secondary {
+            background: #f8f9fa;
+            color: #1a73e8;
+            border: 1px solid #dadce0;
+        }
+
+        .button.secondary:hover {
+            background: #e8f0fe;
+        }
+
+        .button.danger {
+            background: #ea4335;
+        }
+
+        .button.danger:hover {
+            background: #d33b2c;
+        }
+
+        .status {
+            font-size: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .status.error {
+            background: #ffeaea;
+            color: #d32f2f;
+            border: 1px solid #ffcccb;
+        }
+
+        .status.warning {
+            background: #fff3e0;
+            color: #f57c00;
+            border: 1px solid #ffcc02;
+        }
+
+        .link {
+            color: #1a73e8;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .user-info {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+
+        .user-info .name {
+            font-weight: 500;
+            color: #202124;
+        }
+
+        .user-info .account {
+            font-size: 12px;
+            color: #5f6368;
         }
 
         .cookie-output {
@@ -51,85 +200,144 @@
             font-style: italic;
         }
 
-        .button {
-            background: #1a73e8;
-            color: white;
+        .back-button {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
             border: none;
-            border-radius: 4px;
-            padding: 8px 16px;
-            font-size: 14px;
+            color: white;
             cursor: pointer;
-            width: 100%;
-            margin-bottom: 8px;
-        }
-
-        .button:hover {
-            background: #1557b0;
-        }
-
-        .button:disabled {
-            background: #dadce0;
-            color: #5f6368;
-            cursor: not-allowed;
-        }
-
-        .button.copy {
-            background: #34a853;
-        }
-
-        .button.copy:hover {
-            background: #2d8f47;
-        }
-
-        .status {
-            font-size: 12px;
-            padding: 8px;
+            font-size: 18px;
+            padding: 4px;
             border-radius: 4px;
-            margin-bottom: 12px;
-            text-align: center;
         }
 
-        .status.success {
-            background: #e8f5e8;
-            color: #2e7d32;
-            border: 1px solid #a5d6a7;
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        .status.error {
-            background: #ffeaea;
-            color: #d32f2f;
-            border: 1px solid #ffcccb;
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
         }
 
-        .cookies-info {
-            font-size: 12px;
-            color: #5f6368;
-            margin-bottom: 12px;
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="header">
-        <h1>Apollo Auto Cookie Extractor</h1>
-    </div>
+    <!-- Settings Page -->
+    <div id="settingsPage" class="page">
+        <div class="header">
+            <button class="back-button" id="settingsBackBtn">←</button>
+            <h1>設定</h1>
+        </div>
+        <div class="content">
+            <div id="settingsStatus" class="status" style="display: none;"></div>
 
-    <div id="status" class="status" style="display: none;"></div>
-
-    <div class="section">
-        <div class="section-title">Cookie 提取</div>
-        <button id="extractBtn" class="button">提取 MayoHR Cookies</button>
-        <div class="cookies-info">
-            將提取 __ModuleSessionCookie 和 __ModuleSessionCookie2
+            <div class="form-group">
+                <label for="serverUrl">伺服器位址</label>
+                <input type="url" id="serverUrl" placeholder="http://localhost:5566" value="http://localhost:5566">
+            </div>
+            <button id="saveSettings" class="button">儲存設定</button>
         </div>
     </div>
 
-    <div class="section">
-        <div class="section-title">Cookie 輸出 (JSON 格式)</div>
-        <div id="cookieOutput" class="cookie-output empty">
-            點擊上方按鈕提取 cookies...
+    <!-- Login Page -->
+    <div id="loginPage" class="page">
+        <div class="header">
+            <button class="settings-icon" id="loginSettingsBtn">⚙️</button>
+            <h1>Apollo Auto</h1>
         </div>
-        <button id="copyBtn" class="button copy" disabled>複製到剪貼板</button>
+        <div class="content">
+            <div id="loginStatus" class="status" style="display: none;"></div>
+
+            <div class="form-group">
+                <label for="loginAccount">帳號</label>
+                <input type="text" id="loginAccount" placeholder="請輸入帳號">
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">密碼</label>
+                <input type="password" id="loginPassword" placeholder="請輸入密碼">
+            </div>
+            <button id="loginBtn" class="button">登入</button>
+            <button class="button secondary" id="showRegisterBtn">註冊新帳號</button>
+        </div>
+    </div>
+
+    <!-- Register Page -->
+    <div id="registerPage" class="page">
+        <div class="header">
+            <button class="back-button" id="registerBackBtn">←</button>
+            <h1>註冊</h1>
+        </div>
+        <div class="content">
+            <div id="registerStatus" class="status" style="display: none;"></div>
+
+            <div class="form-group">
+                <label for="registerAccount">帳號</label>
+                <input type="text" id="registerAccount" placeholder="請輸入帳號">
+            </div>
+            <div class="form-group">
+                <label for="registerPassword">密碼</label>
+                <input type="password" id="registerPassword" placeholder="請輸入密碼">
+            </div>
+            <div class="form-group">
+                <label for="registerDisplayName">顯示名稱</label>
+                <input type="text" id="registerDisplayName" placeholder="請輸入顯示名稱">
+            </div>
+            <div class="form-group">
+                <label for="registerTimezone">時區</label>
+                <input type="text" id="registerTimezone" placeholder="Asia/Taipei" value="Asia/Taipei">
+            </div>
+            <button id="registerBtn" class="button">註冊</button>
+            <div class="text-center">
+                <a class="link" id="backToLoginLink">已有帳號？回到登入</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Page -->
+    <div id="mainPage" class="page">
+        <div class="header">
+            <button class="settings-icon" id="mainSettingsBtn">⚙️</button>
+            <h1>Apollo Auto</h1>
+        </div>
+        <div class="content">
+            <div id="userInfo" class="user-info">
+                <div class="name" id="userName">載入中...</div>
+                <div class="account" id="userAccount"></div>
+            </div>
+
+            <div id="mainStatus" class="status" style="display: none;"></div>
+
+            <div class="form-group">
+                <button id="extractBtn" class="button">提取 MayoHR Cookies</button>
+            </div>
+
+            <div class="form-group">
+                <label>Cookie 輸出</label>
+                <div id="cookieOutput" class="cookie-output empty">
+                    點擊上方按鈕提取 cookies...
+                </div>
+                <button id="copyBtn" class="button secondary" disabled>複製到剪貼板</button>
+                <button id="uploadBtn" class="button" disabled>上傳至伺服器</button>
+            </div>
+
+            <button id="logoutBtn" class="button danger">登出</button>
+        </div>
     </div>
 
     <script src="popup.js"></script>

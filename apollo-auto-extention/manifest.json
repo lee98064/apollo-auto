@@ -1,13 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "Apollo Auto Cookie Extractor",
-  "description": "提取 MayoHR 系統的 cookies",
-  "version": "0.1.0",
+  "name": "Apollo Auto",
+  "description": "Apollo 自動打卡系統客戶端",
+  "version": "0.2.0",
   "minimum_chrome_version": "110",
   "action": {
-    "default_title": "Apollo Auto Cookie Extractor",
+    "default_title": "Apollo Auto",
     "default_popup": "src/popup/popup.html"
   },
-  "permissions": ["cookies"],
-  "host_permissions": ["https://*.mayohr.com/*"]
+  "permissions": ["cookies", "storage", "alarms", "webRequest"],
+  "host_permissions": ["https://*.mayohr.com/*", "http://localhost:*/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "background": {
+    "service_worker": "src/background/background.js"
+  }
 }
