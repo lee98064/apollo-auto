@@ -234,6 +234,220 @@
                 transform: rotate(360deg);
             }
         }
+
+        /* Tab System Styles */
+        .tab-container {
+            background: white;
+        }
+
+        .tab-header {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dadce0;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #5f6368;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-button:hover {
+            background: rgba(26, 115, 232, 0.04);
+            color: #1a73e8;
+        }
+
+        .tab-button.active {
+            color: #1a73e8;
+            border-bottom-color: #1a73e8;
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Job Management Styles */
+        .job-card {
+            background: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .job-title {
+            font-weight: 500;
+            color: #202124;
+            font-size: 16px;
+        }
+
+        .job-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .job-status.active {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .job-status.inactive {
+            background: #ffeaea;
+            color: #d32f2f;
+        }
+
+        .job-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .job-detail {
+            font-size: 12px;
+        }
+
+        .job-detail-label {
+            color: #5f6368;
+            margin-bottom: 4px;
+        }
+
+        .job-detail-value {
+            color: #202124;
+            font-weight: 500;
+        }
+
+        .job-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .job-actions .button {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .button.small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .button.success {
+            background: #34a853;
+        }
+
+        .button.success:hover {
+            background: #2d8f47;
+        }
+
+        .button.warning {
+            background: #fbbc04;
+            color: #202124;
+        }
+
+        .button.warning:hover {
+            background: #f9ab00;
+        }
+
+        /* Job Form Styles */
+        .job-form {
+            background: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .job-form h3 {
+            margin: 0 0 16px 0;
+            color: #202124;
+            font-size: 16px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #1a73e8;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #5f6368;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
     </style>
 </head>
 
@@ -315,28 +529,98 @@
             <button class="settings-icon" id="mainSettingsBtn">⚙️</button>
             <h1>Apollo Auto</h1>
         </div>
-        <div class="content">
-            <div id="userInfo" class="user-info">
-                <div class="name" id="userName">載入中...</div>
-                <div class="account" id="userAccount"></div>
+
+        <div id="userInfo" class="user-info" style="margin: 0; border-radius: 0;">
+            <div class="name" id="userName">載入中...</div>
+            <div class="account" id="userAccount"></div>
+        </div>
+
+        <div class="tab-container">
+            <div class="tab-header">
+                <button class="tab-button active" id="cookieTab">Cookie 管理</button>
+                <button class="tab-button" id="jobTab">排程管理</button>
             </div>
 
-            <div id="mainStatus" class="status" style="display: none;"></div>
+            <!-- Cookie Management Tab -->
+            <div class="tab-content active" id="cookieContent">
+                <div id="mainStatus" class="status" style="display: none;"></div>
 
-            <div class="form-group">
-                <button id="extractBtn" class="button">提取 MayoHR Cookies</button>
-            </div>
-
-            <div class="form-group">
-                <label>Cookie 輸出</label>
-                <div id="cookieOutput" class="cookie-output empty">
-                    點擊上方按鈕提取 cookies...
+                <div class="form-group">
+                    <button id="extractBtn" class="button">提取 MayoHR Cookies</button>
                 </div>
-                <button id="copyBtn" class="button secondary" disabled>複製到剪貼板</button>
-                <button id="uploadBtn" class="button" disabled>上傳至伺服器</button>
+
+                <div class="form-group">
+                    <label>Cookie 輸出</label>
+                    <div id="cookieOutput" class="cookie-output empty">
+                        點擊上方按鈕提取 cookies...
+                    </div>
+                    <button id="copyBtn" class="button secondary" disabled>複製到剪貼板</button>
+                    <button id="uploadBtn" class="button" disabled>上傳至伺服器</button>
+                </div>
+
+                <button id="logoutBtn" class="button danger">登出</button>
             </div>
 
-            <button id="logoutBtn" class="button danger">登出</button>
+            <!-- Job Management Tab -->
+            <div class="tab-content" id="jobContent">
+                <div id="jobStatus" class="status" style="display: none;"></div>
+
+                <!-- Job List -->
+                <div id="jobList">
+                    <div class="empty-state" id="jobEmptyState">
+                        <div class="empty-state-icon">⏰</div>
+                        <div>載入排程中...</div>
+                    </div>
+                </div>
+
+                <!-- Add Job Form -->
+                <div class="job-form" id="addJobForm" style="display: none;">
+                    <h3>新增排程</h3>
+
+                    <div class="form-group">
+                        <label for="jobType">排程類型</label>
+                        <select id="jobType"
+                            style="width: 100%; padding: 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px;">
+                            <option value="CHECK_IN">上班打卡</option>
+                            <option value="CHECK_OUT">下班打卡</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jobStartTime">開始時間</label>
+                        <input type="datetime-local" id="jobStartTime"
+                            style="width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px;">
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="jobEndTime">結束時間（可選）</label>
+                        <input type="datetime-local" id="jobEndTime"
+                            style="width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jobExpireTime">過期時間（可選）</label>
+                        <input type="datetime-local" id="jobExpireTime"
+                            style="width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px;">
+                    </div>
+
+                    <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                        <label class="switch">
+                            <input type="checkbox" id="jobIsActive" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <label for="jobIsActive">立即啟用</label>
+                    </div>
+
+                    <div style="display: flex; gap: 8px;">
+                        <button id="createJobBtn" class="button" style="flex: 1;">新增排程</button>
+                        <button id="cancelJobBtn" class="button secondary" style="flex: 1;">取消</button>
+                    </div>
+                </div>
+
+                <button id="addJobBtn" class="button success">新增排程</button>
+            </div>
         </div>
     </div>
 

@@ -1,246 +1,129 @@
 class ApolloAutoExtension {
   constructor() {
-    this.targetCookies = ['__ModuleSessionCookie', '__ModuleSessionCookie2']
-    this.domain = '.mayohr.com'
-    this.currentUser = null
-    this.serverUrl = 'http://localhost:5566'
-    this.authToken = null
-
-    this.initializeApp()
+    this.debugLog('Extension initialized')
+    this.init()
   }
 
-  // 發送訊息到 background script
-  sendToBackground(type, data) {
-    try {
-      chrome.runtime.sendMessage({ type, data }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error(
-            'Error sending message to background:',
-            chrome.runtime.lastError
-          )
-        } else {
-          console.log('Message sent to background, response:', response)
-        }
-      })
-    } catch (error) {
-      console.error('Failed to send message to background:', error)
-    }
-  }
-
-  // 調試日誌方法
-  debugLog(message, data = null) {
-    console.log('[POPUP]', message, data)
-    this.sendToBackground('DEBUG_LOG', {
-      message,
-      data,
-      timestamp: new Date().toISOString(),
-    })
-  }
-
-  // 解碼 JWT token
-  decodeJWT(token) {
-    try {
-      if (!token || typeof token !== 'string') {
-        return null
-      }
-
-      const parts = token.split('.')
-      if (parts.length !== 3) {
-        console.error('Invalid JWT format')
-        return null
-      }
-
-      // 解碼 payload (第二部分)
-      const payload = parts[1]
-      // 補充 base64 padding 如果需要
-      const paddedPayload = payload + '='.repeat((4 - (payload.length % 4)) % 4)
-      const decodedPayload = atob(
-        paddedPayload.replace(/-/g, '+').replace(/_/g, '/')
-      )
-
-      return JSON.parse(decodedPayload)
-    } catch (error) {
-      console.error('Error decoding JWT:', error)
-      return null
-    }
-  }
-
-  // 從 JWT token 中提取用戶信息
-  getUserFromToken() {
-    if (!this.authToken) {
-      return null
-    }
-
-    const decoded = this.decodeJWT(this.authToken)
-    if (!decoded) {
-      return null
-    }
-
-    this.debugLog('Decoded JWT payload:', decoded)
-
-    // 根據後端 JWT 結構，用戶信息在 user 物件中
-    if (decoded.user) {
-      return {
-        id: decoded.user.id,
-        account: decoded.user.account,
-        displayName: decoded.user.displayName,
-        timezone: decoded.user.timezone,
-      }
-    }
-
-    // 兼容性處理：如果沒有 user 物件，嘗試從根層級獲取
-    return {
-      id: decoded.id || decoded.userId || decoded.sub,
-      account: decoded.account || decoded.username || decoded.email,
-      displayName: decoded.displayName || decoded.name || decoded.account,
-      timezone: decoded.timezone,
-    }
-  }
-
-  async initializeApp() {
-    this.debugLog('Initializing Apollo Auto Extension')
+  async init() {
     await this.loadSettings()
-    await this.checkAuthState()
-    this.initializeUI()
-    this.debugLog('Extension initialization complete')
+    this.setupEventListeners()
+    this.checkAuthStatus()
+
+    // Setup tab functionality
+    this.setupTabs()
+
+    // Initialize job management
+    this.currentJobs = []
+    this.editingJobId = null
   }
 
   async loadSettings() {
     try {
-      const result = await chrome.storage.local.get([
-        'serverUrl',
+      const settings = await chrome.storage.local.get([
         'authToken',
+        'serverUrl',
         'currentUser',
       ])
-      console.log('Loaded settings from storage:', result)
 
-      if (result.serverUrl) {
-        this.serverUrl = result.serverUrl
-        console.log('Server URL loaded:', this.serverUrl)
-      }
-      if (result.authToken) {
-        this.authToken = result.authToken
-        console.log(
-          'Auth token loaded:',
-          this.authToken ? 'present' : 'missing'
-        )
-      }
-      if (result.currentUser) {
-        this.currentUser = result.currentUser
-        console.log('Current user loaded:', this.currentUser)
-      } else if (result.authToken) {
-        // 如果沒有儲存的用戶信息但有 token，嘗試從 token 中提取
-        const userFromToken = this.getUserFromToken()
-        if (userFromToken) {
-          this.currentUser = userFromToken
-          console.log('Current user extracted from token:', this.currentUser)
-          // 儲存提取出的用戶信息以供下次使用
-          this.saveSettings()
-        }
-      }
+      this.authToken = settings.authToken || null
+      this.serverUrl = settings.serverUrl || 'http://localhost:5566'
+      this.currentUser = settings.currentUser || null
+
+      document.getElementById('serverUrl').value = this.serverUrl
+
+      this.debugLog('Settings loaded:', {
+        hasToken: !!this.authToken,
+        serverUrl: this.serverUrl,
+        hasUser: !!this.currentUser,
+      })
     } catch (error) {
-      console.error('Failed to load settings:', error)
+      console.error('Error loading settings:', error)
     }
   }
 
   async saveSettings() {
     try {
-      const data = {
-        serverUrl: this.serverUrl,
+      await chrome.storage.local.set({
         authToken: this.authToken,
+        serverUrl: this.serverUrl,
         currentUser: this.currentUser,
-      }
-      console.log('Saving settings to storage:', data)
-
-      await chrome.storage.local.set(data)
-      console.log('Settings saved successfully')
+      })
+      this.debugLog('Settings saved successfully')
     } catch (error) {
-      console.error('Failed to save settings:', error)
+      console.error('Error saving settings:', error)
     }
   }
 
-  async checkAuthState() {
-    if (!this.authToken) {
-      console.log('No auth token found, showing login page')
+  checkAuthStatus() {
+    this.debugLog('Checking auth status', {
+      hasToken: !!this.authToken,
+      hasUser: !!this.currentUser,
+    })
+
+    if (this.authToken && this.currentUser) {
+      this.showMainPage()
+    } else {
       this.showLoginPage()
-      return
-    }
-
-    // 如果沒有 currentUser，嘗試從 JWT token 中解析
-    if (!this.currentUser) {
-      this.currentUser = this.getUserFromToken()
-      if (this.currentUser) {
-        this.debugLog('User info extracted from JWT token:', this.currentUser)
-        // 保存解析出的用戶信息
-        await this.saveSettings()
-      }
-    }
-
-    // 如果還是沒有用戶信息，顯示登入頁面
-    if (!this.currentUser) {
-      this.debugLog('Unable to get user info from token, showing login page')
-      this.showLoginPage()
-      return
-    }
-
-    console.log(
-      'Checking auth state with token:',
-      this.authToken ? 'present' : 'missing'
-    )
-
-    // 驗證 token 是否仍然有效
-    try {
-      const response = await this.apiCall('/jobs', 'GET')
-      console.log('Auth check response:', response)
-
-      if (response.success) {
-        console.log('Auth valid, showing main page')
-        this.showMainPage()
-      } else {
-        console.log('Auth invalid, logging out')
-        this.logout()
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error)
-      this.logout()
     }
   }
 
-  initializeUI() {
-    // Settings page
-    document.getElementById('serverUrl').value = this.serverUrl
+  setupTabs() {
+    const cookieTab = document.getElementById('cookieTab')
+    const jobTab = document.getElementById('jobTab')
+
+    cookieTab.addEventListener('click', () => {
+      this.switchTab('cookie')
+    })
+
+    jobTab.addEventListener('click', () => {
+      this.switchTab('job')
+      this.loadJobs()
+    })
+  }
+
+  switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach((btn) => {
+      btn.classList.remove('active')
+    })
+    document.getElementById(tabName + 'Tab').classList.add('active')
+
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach((content) => {
+      content.classList.remove('active')
+    })
+    document.getElementById(tabName + 'Content').classList.add('active')
+
+    this.debugLog('Switched to tab:', tabName)
+
+    // Load jobs after tab switch if switching to job tab
+    if (tabName === 'job') {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        this.loadJobs()
+      }, 100)
+    }
+  }
+
+  setupEventListeners() {
+    // Settings
     document
       .getElementById('saveSettings')
-      .addEventListener('click', () => this.saveServerSettings())
+      .addEventListener('click', () => this.saveSettingsHandler())
     document
       .getElementById('settingsBackBtn')
-      .addEventListener('click', () => this.goBackFromSettings())
+      .addEventListener('click', () => this.showLoginPage())
 
-    // Login page
-    document
-      .getElementById('loginBtn')
-      .addEventListener('click', () => this.login())
-    document
-      .getElementById('loginAccount')
-      .addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') this.login()
-      })
-    document
-      .getElementById('loginPassword')
-      .addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') this.login()
-      })
+    // Navigation
     document
       .getElementById('loginSettingsBtn')
       .addEventListener('click', () => this.showSettingsPage())
     document
+      .getElementById('mainSettingsBtn')
+      .addEventListener('click', () => this.showSettingsPage())
+    document
       .getElementById('showRegisterBtn')
       .addEventListener('click', () => this.showRegisterPage())
-
-    // Register page
-    document
-      .getElementById('registerBtn')
-      .addEventListener('click', () => this.register())
     document
       .getElementById('registerBackBtn')
       .addEventListener('click', () => this.showLoginPage())
@@ -248,7 +131,18 @@ class ApolloAutoExtension {
       .getElementById('backToLoginLink')
       .addEventListener('click', () => this.showLoginPage())
 
-    // Main page
+    // Auth
+    document
+      .getElementById('loginBtn')
+      .addEventListener('click', () => this.login())
+    document
+      .getElementById('registerBtn')
+      .addEventListener('click', () => this.register())
+    document
+      .getElementById('logoutBtn')
+      .addEventListener('click', () => this.logout())
+
+    // Cookie management
     document
       .getElementById('extractBtn')
       .addEventListener('click', () => this.extractCookies())
@@ -258,24 +152,31 @@ class ApolloAutoExtension {
     document
       .getElementById('uploadBtn')
       .addEventListener('click', () => this.uploadCookies())
-    document
-      .getElementById('logoutBtn')
-      .addEventListener('click', () => this.logout())
-    document
-      .getElementById('mainSettingsBtn')
-      .addEventListener('click', () => this.showSettingsPage())
 
-    // Update user info if logged in
-    if (this.authToken) {
-      this.updateUserInfo()
-    }
+    // Job management
+    document
+      .getElementById('addJobBtn')
+      .addEventListener('click', () => this.showAddJobForm())
+    document
+      .getElementById('createJobBtn')
+      .addEventListener('click', () => this.createJob())
+    document
+      .getElementById('cancelJobBtn')
+      .addEventListener('click', () => this.hideAddJobForm())
+
+    this.debugLog('Event listeners setup complete')
   }
 
   showPage(pageId) {
     document.querySelectorAll('.page').forEach((page) => {
-      page.classList.remove('active')
+      page.style.display = 'none'
     })
-    document.getElementById(pageId).classList.add('active')
+    document.getElementById(pageId).style.display = 'block'
+    this.debugLog('Showing page:', pageId)
+  }
+
+  showSettingsPage() {
+    this.showPage('settingsPage')
   }
 
   showLoginPage() {
@@ -288,161 +189,534 @@ class ApolloAutoExtension {
 
   showMainPage() {
     this.showPage('mainPage')
-    // 總是嘗試更新用戶信息
     this.updateUserInfo()
-  }
-
-  showSettingsPage() {
-    this.showPage('settingsPage')
-    document.getElementById('serverUrl').value = this.serverUrl
-  }
-
-  goBackFromSettings() {
-    // 根據登入狀態決定返回哪個頁面
-    if (this.authToken && this.currentUser) {
-      this.showMainPage()
-    } else {
-      this.showLoginPage()
+    // Load jobs when showing main page and job tab is active
+    if (document.getElementById('jobTab').classList.contains('active')) {
+      this.loadJobs()
     }
   }
 
   updateUserInfo() {
-    // 如果沒有 currentUser，嘗試從 JWT token 中獲取
-    if (!this.currentUser && this.authToken) {
-      this.currentUser = this.getUserFromToken()
-      if (this.currentUser) {
-        this.debugLog('User info updated from JWT token:', this.currentUser)
-        // 保存更新的用戶信息
-        this.saveSettings()
-      }
-    }
-
     if (this.currentUser) {
-      const userName =
-        this.currentUser.displayName ||
-        this.currentUser.account ||
-        'Unknown User'
-      const userAccount = this.currentUser.account || 'unknown'
-
-      document.getElementById('userName').textContent = userName
-      document.getElementById('userAccount').textContent = `@${userAccount}`
-
-      this.debugLog('User info displayed:', { userName, userAccount })
-    } else {
-      // 如果還是沒有用戶信息，顯示默認值
-      document.getElementById('userName').textContent = '載入中...'
-      document.getElementById('userAccount').textContent = ''
-      this.debugLog('No user info available, showing loading state')
+      this.debugLog('Updating user info display')
+      document.getElementById('userName').textContent =
+        this.currentUser.displayName || this.currentUser.account || '未知使用者'
+      document.getElementById('userAccount').textContent =
+        this.currentUser.account || ''
     }
   }
 
-  showStatus(elementId, message, type = 'success') {
-    const element = document.getElementById(elementId)
-    element.textContent = message
-    element.className = `status ${type}`
-    element.style.display = 'block'
+  // Job Management Functions
+  async loadJobs() {
+    try {
+      this.debugLog('Loading jobs')
+      const response = await this.apiCall('/api/jobs', 'GET')
 
-    setTimeout(() => {
-      element.style.display = 'none'
-    }, 5000)
+      if (response.success) {
+        this.currentJobs = response.result?.jobs || []
+        this.renderJobs()
+        this.debugLog('Jobs loaded successfully', {
+          count: this.currentJobs.length,
+        })
+      } else {
+        throw new Error(response.error?.message || '載入排程失敗')
+      }
+    } catch (error) {
+      console.error('Load jobs failed:', error)
+      this.showStatus('jobStatus', '載入排程失敗：' + error.message, 'error')
+      this.renderEmptyState('載入排程失敗')
+    }
   }
 
-  async saveServerSettings() {
-    const serverUrl = document.getElementById('serverUrl').value.trim()
+  renderJobs() {
+    const jobList = document.getElementById('jobList')
+    const emptyState = document.getElementById('jobEmptyState')
 
-    if (!serverUrl) {
-      this.showStatus('settingsStatus', '請輸入伺服器位址', 'error')
+    // Check if elements exist before proceeding
+    if (!jobList || !emptyState) {
+      this.debugLog('Job management elements not found, skipping render')
       return
     }
 
-    try {
-      // Validate URL format
-      new URL(serverUrl)
-      this.serverUrl = serverUrl.replace(/\/$/, '') // Remove trailing slash
-      await this.saveSettings()
-      this.showStatus('settingsStatus', '設定已儲存', 'success')
+    if (this.currentJobs.length === 0) {
+      this.renderEmptyState('目前沒有排程')
+      return
+    }
 
-      setTimeout(() => {
-        this.goBackFromSettings()
-      }, 1500)
+    emptyState.style.display = 'none'
+
+    const jobsHtml = this.currentJobs
+      .map((job) => this.renderJobCard(job))
+      .join('')
+    jobList.innerHTML = jobsHtml
+
+    // Add event listeners for job actions
+    this.setupJobEventListeners()
+  }
+
+  renderJobCard(job) {
+    const statusClass = job.isActive ? 'active' : 'inactive'
+    const statusText = job.isActive ? '啟用' : '停用'
+    const typeText = job.type === 'CHECK_IN' ? '上班打卡' : '下班打卡'
+
+    const formatDate = (dateString) => {
+      if (!dateString) return '未設定'
+      return new Date(dateString).toLocaleString('zh-TW')
+    }
+
+    return `
+      <div class="job-card" data-job-id="${job.id}">
+        <div class="job-header">
+          <div class="job-title">${typeText}</div>
+          <div class="job-status ${statusClass}">${statusText}</div>
+        </div>
+        <div class="job-details">
+          <div class="job-detail">
+            <div class="job-detail-label">開始時間</div>
+            <div class="job-detail-value">${formatDate(job.startAt)}</div>
+          </div>
+          <div class="job-detail">
+            <div class="job-detail-label">結束時間</div>
+            <div class="job-detail-value">${formatDate(job.endAt)}</div>
+          </div>
+          <div class="job-detail">
+            <div class="job-detail-label">過期時間</div>
+            <div class="job-detail-value">${formatDate(job.expiredAt)}</div>
+          </div>
+          <div class="job-detail">
+            <div class="job-detail-label">狀態</div>
+            <div class="job-detail-value">${job.status || '未知'}</div>
+          </div>
+        </div>
+        <div class="job-actions">
+          <button class="button small ${job.isActive ? 'warning' : 'success'} toggle-job-btn"
+                  data-job-id="${job.id}" data-is-active="${job.isActive}">
+            ${job.isActive ? '停用' : '啟用'}
+          </button>
+          <button class="button small secondary edit-job-btn" data-job-id="${job.id}">編輯</button>
+        </div>
+      </div>
+    `
+  }
+
+  renderEmptyState(message) {
+    const jobList = document.getElementById('jobList')
+    const emptyState = document.getElementById('jobEmptyState')
+
+    // Check if elements exist before proceeding
+    if (!jobList || !emptyState) {
+      this.debugLog('Job management elements not found for empty state')
+      return
+    }
+
+    emptyState.style.display = 'block'
+    emptyState.innerHTML = `
+      <div class="empty-state-icon">⏰</div>
+      <div>${message}</div>
+    `
+
+    // Hide any existing job cards
+    const jobCards = jobList.querySelectorAll('.job-card')
+    for (const card of jobCards) {
+      card.remove()
+    }
+  }
+
+  setupJobEventListeners() {
+    // Remove existing event listeners to prevent duplicates
+    const existingToggleBtns = document.querySelectorAll('.toggle-job-btn')
+    const existingEditBtns = document.querySelectorAll('.edit-job-btn')
+
+    existingToggleBtns.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const jobId = e.target.getAttribute('data-job-id')
+        const isActive = e.target.getAttribute('data-is-active') === 'true'
+        this.toggleJobStatus(jobId, !isActive)
+      })
+    })
+
+    existingEditBtns.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const jobId = e.target.getAttribute('data-job-id')
+        this.editJob(jobId)
+      })
+    })
+  }
+
+  showAddJobForm() {
+    document.getElementById('addJobForm').style.display = 'block'
+    document.getElementById('addJobBtn').style.display = 'none'
+
+    // Set default start time to current time
+    const now = new Date()
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+    document.getElementById('jobStartTime').value = now
+      .toISOString()
+      .slice(0, 16)
+
+    this.editingJobId = null
+    this.debugLog('Showing add job form')
+  }
+
+  hideAddJobForm() {
+    document.getElementById('addJobForm').style.display = 'none'
+    document.getElementById('addJobBtn').style.display = 'block'
+    this.clearJobForm()
+    this.editingJobId = null
+    this.debugLog('Hiding add job form')
+  }
+
+  clearJobForm() {
+    document.getElementById('jobType').value = 'CHECK_IN'
+    document.getElementById('jobStartTime').value = ''
+    document.getElementById('jobEndTime').value = ''
+    document.getElementById('jobExpireTime').value = ''
+    document.getElementById('jobIsActive').checked = true
+  }
+
+  async createJob() {
+    try {
+      const createBtn = document.getElementById('createJobBtn')
+      createBtn.disabled = true
+      const isEditing = this.editingJobId !== null
+      createBtn.textContent = isEditing ? '更新中...' : '新增中...'
+
+      const startTime = document.getElementById('jobStartTime').value
+      const endTime = document.getElementById('jobEndTime').value
+      const expireTime = document.getElementById('jobExpireTime').value
+
+      // Validate required fields
+      if (!startTime) {
+        throw new Error('請選擇開始時間')
+      }
+
+      const jobData = {
+        type: document.getElementById('jobType').value,
+        startAt: new Date(startTime).toISOString(),
+        endAt: endTime ? new Date(endTime).toISOString() : null,
+        expiredAt: expireTime ? new Date(expireTime).toISOString() : null,
+        isActive: document.getElementById('jobIsActive').checked,
+      }
+
+      this.debugLog(isEditing ? 'Updating job:' : 'Creating job:', jobData)
+
+      const method = isEditing ? 'PUT' : 'POST'
+      const endpoint = isEditing
+        ? `/api/jobs/${this.editingJobId}`
+        : '/api/jobs'
+      const response = await this.apiCall(endpoint, method, jobData)
+
+      if (response.success) {
+        this.showStatus(
+          'jobStatus',
+          `排程${isEditing ? '更新' : '新增'}成功！`,
+          'success'
+        )
+        this.hideAddJobForm()
+        this.loadJobs() // Reload jobs list
+      } else {
+        throw new Error(
+          response.error?.message || `${isEditing ? '更新' : '新增'}排程失敗`
+        )
+      }
     } catch (error) {
-      this.showStatus('settingsStatus', '無效的 URL 格式', 'error')
+      console.error('Create/Update job failed:', error)
+      this.showStatus('jobStatus', error.message, 'error')
+    } finally {
+      const createBtn = document.getElementById('createJobBtn')
+      createBtn.disabled = false
+      createBtn.textContent = '新增排程'
+    }
+  }
+
+  async toggleJobStatus(jobId, isActive) {
+    try {
+      const numericJobId = parseInt(jobId, 10)
+      this.debugLog('Toggling job status:', { jobId: numericJobId, isActive })
+
+      const response = await this.apiCall(`/api/jobs/${numericJobId}`, 'PUT', {
+        isActive,
+      })
+
+      if (response.success) {
+        // Update the job in currentJobs array
+        const jobIndex = this.currentJobs.findIndex(j => j.id === numericJobId)
+        if (jobIndex !== -1) {
+          this.currentJobs[jobIndex].isActive = isActive
+        }
+
+        // Update the button UI immediately
+        this.updateToggleButton(numericJobId, isActive)
+
+        this.showStatus(
+          'jobStatus',
+          `排程已${isActive ? '啟用' : '停用'}`,
+          'success'
+        )
+        
+        // Only reload if we couldn't find the job locally
+        if (jobIndex === -1) {
+          this.loadJobs()
+        }
+      } else {
+        throw new Error(response.error?.message || '更新排程狀態失敗')
+      }
+    } catch (error) {
+      console.error('Toggle job status failed:', error)
+      this.showStatus('jobStatus', error.message, 'error')
+    }
+  }
+
+  updateToggleButton(jobId, isActive) {
+    const button = document.querySelector(`[data-job-id="${jobId}"].toggle-job-btn`)
+    if (button) {
+      // Update button text
+      button.textContent = isActive ? '停用' : '啟用'
+      
+      // Update button classes
+      button.classList.remove('success', 'warning')
+      button.classList.add(isActive ? 'warning' : 'success')
+      
+      // Update data attribute
+      button.setAttribute('data-is-active', isActive.toString())
+      
+      this.debugLog('Updated toggle button for job:', { jobId, isActive })
+    }
+  }
+
+  async editJob(jobId) {
+    try {
+      const numericJobId = parseInt(jobId, 10)
+      const job = this.currentJobs.find((j) => j.id === numericJobId)
+      if (!job) {
+        throw new Error('找不到指定的排程')
+      }
+
+      this.debugLog('Editing job:', job)
+
+      // Fill form with job data
+      document.getElementById('jobType').value = job.type
+
+      if (job.startAt) {
+        const startTime = new Date(job.startAt)
+        startTime.setMinutes(
+          startTime.getMinutes() - startTime.getTimezoneOffset()
+        )
+        document.getElementById('jobStartTime').value = startTime
+          .toISOString()
+          .slice(0, 16)
+      }
+
+      if (job.endAt) {
+        const endTime = new Date(job.endAt)
+        endTime.setMinutes(endTime.getMinutes() - endTime.getTimezoneOffset())
+        document.getElementById('jobEndTime').value = endTime
+          .toISOString()
+          .slice(0, 16)
+      }
+
+      if (job.expiredAt) {
+        const expireTime = new Date(job.expiredAt)
+        expireTime.setMinutes(
+          expireTime.getMinutes() - expireTime.getTimezoneOffset()
+        )
+        document.getElementById('jobExpireTime').value = expireTime
+          .toISOString()
+          .slice(0, 16)
+      }
+
+      document.getElementById('jobIsActive').checked = job.isActive
+
+      // Show form and update button text
+      document.getElementById('addJobForm').style.display = 'block'
+      document.getElementById('addJobBtn').style.display = 'none'
+      document.getElementById('createJobBtn').textContent = '更新排程'
+
+      this.editingJobId = numericJobId
+    } catch (error) {
+      console.error('Edit job failed:', error)
+      this.showStatus('jobStatus', error.message, 'error')
+    }
+  }
+
+  showStatus(elementId, message, type = 'info') {
+    const statusElement = document.getElementById(elementId)
+    statusElement.textContent = message
+    statusElement.className = `status ${type}`
+    statusElement.style.display = 'block'
+
+    setTimeout(() => {
+      statusElement.style.display = 'none'
+    }, 5000)
+
+    this.debugLog('Status shown:', { elementId, message, type })
+  }
+
+  debugLog(message, data = null) {
+    const logData = {
+      timestamp: new Date().toISOString(),
+      source: 'popup',
+      message: message,
+      data: data,
+    }
+
+    console.log(`[Apollo Auto Popup] ${message}`, data)
+
+    // Send to background script for centralized logging
+    this.sendToBackground('DEBUG_LOG', logData)
+  }
+
+  sendToBackground(type, data) {
+    chrome.runtime.sendMessage({ type, data }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn(
+          'Background script not responding:',
+          chrome.runtime.lastError
+        )
+      }
+    })
+  }
+
+  // Base64 URL decode function for JWT
+  base64UrlDecode(str) {
+    str = (str + '===').slice(0, str.length + (str.length % 4))
+    str = str.replace(/-/g, '+').replace(/_/g, '/')
+    return atob(str)
+  }
+
+  // JWT decode function
+  decodeJWT(token) {
+    try {
+      const parts = token.split('.')
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT format')
+      }
+
+      const payload = JSON.parse(this.base64UrlDecode(parts[1]))
+      return payload
+    } catch (error) {
+      console.error('JWT decode error:', error)
+      return null
     }
   }
 
   async apiCall(endpoint, method = 'GET', data = null) {
-    const url = `${this.serverUrl}/api${endpoint}`
-    const headers = {
-      'Content-Type': 'application/json',
+    const url = `${this.serverUrl}${endpoint}`
+    const options = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
     }
 
     if (this.authToken) {
-      headers['Authorization'] = `Bearer ${this.authToken}`
-    }
-
-    const config = {
-      method,
-      headers,
+      options.headers['Authorization'] = `Bearer ${this.authToken}`
     }
 
     if (data && (method === 'POST' || method === 'PUT')) {
-      config.body = JSON.stringify(data)
+      options.body = JSON.stringify(data)
     }
 
-    this.debugLog(`API Call: ${method} ${url}`, {
-      data,
-      hasAuth: !!this.authToken,
-    })
+    this.debugLog('API call:', { url, method, hasAuth: !!this.authToken })
 
-    // 通知 background script API 呼叫
+    // 通知 background script API 調用
     this.sendToBackground('API_CALL', {
-      url,
+      endpoint,
       method,
       hasAuth: !!this.authToken,
-      timestamp: new Date().toISOString(),
+      hasData: !!data,
     })
 
-    const response = await fetch(url, config)
-    const result = await response.json()
+    try {
+      const response = await fetch(url, options)
 
-    this.debugLog(`API Response: ${method} ${url}`, {
-      status: response.status,
-      success: result.success,
-    })
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(
+          `Server returned non-JSON response: ${response.status} ${response.statusText}`
+        )
+      }
 
-    return result
+      const result = await response.json()
+
+      this.debugLog('API response:', {
+        status: response.status,
+        success: result.success,
+        url,
+      })
+
+      return result
+    } catch (error) {
+      this.debugLog('API call failed:', {
+        url,
+        method,
+        error: error.message,
+        stack: error.stack,
+      })
+      throw error
+    }
+  }
+
+  async saveSettingsHandler() {
+    const saveBtn = document.getElementById('saveSettings')
+    saveBtn.disabled = true
+    saveBtn.textContent = '儲存中...'
+
+    try {
+      this.serverUrl = document.getElementById('serverUrl').value
+      await this.saveSettings()
+      this.showStatus('settingsStatus', '設定已儲存', 'success')
+    } catch {
+      this.showStatus('settingsStatus', '儲存失敗', 'error')
+    } finally {
+      saveBtn.disabled = false
+      saveBtn.textContent = '儲存設定'
+    }
   }
 
   async login() {
-    const account = document.getElementById('loginAccount').value.trim()
+    const loginBtn = document.getElementById('loginBtn')
+    const account = document.getElementById('loginAccount').value
     const password = document.getElementById('loginPassword').value
 
     if (!account || !password) {
-      this.showStatus('loginStatus', '請填寫所有欄位', 'error')
+      this.showStatus('loginStatus', '請輸入帳號和密碼', 'error')
       return
     }
 
-    const loginBtn = document.getElementById('loginBtn')
     loginBtn.disabled = true
     loginBtn.innerHTML = '<span class="loading"></span>登入中...'
 
     try {
-      const response = await this.apiCall('/login', 'POST', {
+      const response = await this.apiCall('/api/login', 'POST', {
         account,
         password,
       })
 
       if (response.success) {
-        this.debugLog('Login successful, saving auth data:', response.result)
+        this.debugLog('Login successful, decoding token')
+
+        // Decode JWT to get user info
+        const decodedToken = this.decodeJWT(response.result.token)
+        if (decodedToken?.user) {
+          this.currentUser = decodedToken.user
+          this.debugLog('User info extracted from JWT:', this.currentUser)
+        } else {
+          this.debugLog(
+            'Could not extract user info from token, using response'
+          )
+          this.currentUser = response.result.user || { account }
+        }
+
         this.authToken = response.result.token
-        this.currentUser = response.result.user
         await this.saveSettings()
 
         // 通知 background script 認證狀態變更
         this.sendToBackground('AUTH_STATE_CHANGED', {
           isLoggedIn: true,
           user: this.currentUser,
-          token: this.authToken ? 'present' : 'missing',
+          token: this.authToken,
         })
 
         this.showStatus('loginStatus', '登入成功！', 'success')
@@ -451,7 +725,7 @@ class ApolloAutoExtension {
           this.showMainPage()
         }, 1000)
       } else {
-        this.debugLog('Login failed:', response)
+        console.log('Login failed:', response)
         this.showStatus(
           'loginStatus',
           response.error?.message || '登入失敗',
@@ -468,36 +742,54 @@ class ApolloAutoExtension {
   }
 
   async register() {
-    const account = document.getElementById('registerAccount').value.trim()
+    const registerBtn = document.getElementById('registerBtn')
+    const account = document.getElementById('registerAccount').value
     const password = document.getElementById('registerPassword').value
-    const displayName = document
-      .getElementById('registerDisplayName')
-      .value.trim()
-    const timezone =
-      document.getElementById('registerTimezone').value.trim() || 'Asia/Taipei'
+    const displayName = document.getElementById('registerDisplayName').value
+    const timezone = document.getElementById('registerTimezone').value
 
     if (!account || !password || !displayName) {
       this.showStatus('registerStatus', '請填寫所有必填欄位', 'error')
       return
     }
 
-    const registerBtn = document.getElementById('registerBtn')
     registerBtn.disabled = true
     registerBtn.innerHTML = '<span class="loading"></span>註冊中...'
 
     try {
-      const response = await this.apiCall('/register', 'POST', {
+      const response = await this.apiCall('/api/register', 'POST', {
         account,
         password,
         displayName,
-        timezone,
+        timezone: timezone || 'Asia/Taipei',
       })
 
       if (response.success) {
-        console.log(
-          'Registration successful, saving auth data:',
-          response.result
-        )
+        this.debugLog('Registration successful, decoding token')
+
+        // Decode JWT to get user info
+        const decodedToken = this.decodeJWT(response.result.token)
+        if (decodedToken?.user) {
+          this.currentUser = decodedToken.user
+          this.debugLog('User info extracted from JWT:', this.currentUser)
+        } else {
+          this.debugLog(
+            'Could not extract user info from token, using response data'
+          )
+          this.currentUser = response.result.user || {
+            account,
+            displayName,
+            timezone,
+          }
+        }
+
+        // 通知 background script 認證狀態變更
+        this.sendToBackground('AUTH_STATE_CHANGED', {
+          isLoggedIn: true,
+          user: this.currentUser,
+          token: this.authToken,
+        })
+
         this.authToken = response.result.token
         this.currentUser = response.result.user
         await this.saveSettings()
@@ -549,6 +841,11 @@ class ApolloAutoExtension {
     this.showLoginPage()
   }
 
+  // Cookie management properties and methods
+  domain = '.mayohr.com'
+  targetCookies = ['__ModuleSessionCookie', '__ModuleSessionCookie2']
+  cookieJsonString = null
+
   async extractCookies() {
     try {
       const extractBtn = document.getElementById('extractBtn')
@@ -556,8 +853,14 @@ class ApolloAutoExtension {
       extractBtn.innerHTML = '<span class="loading"></span>提取中...'
 
       // Get all cookies for mayohr.com domain
+      this.debugLog('Fetching cookies for domain:', this.domain)
       const cookies = await chrome.cookies.getAll({
         domain: this.domain,
+      })
+
+      this.debugLog('All cookies found:', {
+        count: cookies.length,
+        names: cookies.map((c) => c.name),
       })
 
       // Filter for target cookies
@@ -565,8 +868,16 @@ class ApolloAutoExtension {
         this.targetCookies.includes(cookie.name)
       )
 
+      this.debugLog('Target cookies found:', {
+        count: targetCookies.length,
+        names: targetCookies.map((c) => c.name),
+        targetNames: this.targetCookies,
+      })
+
       if (targetCookies.length === 0) {
-        throw new Error('未找到目標 cookies。請確保已登入 MayoHR 系統。')
+        throw new Error(
+          `未找到目標 cookies (${this.targetCookies.join(', ')})。請確保已登入 MayoHR 系統。`
+        )
       }
 
       // Format cookies as JSON array
@@ -651,7 +962,7 @@ class ApolloAutoExtension {
       uploadBtn.disabled = true
       uploadBtn.innerHTML = '<span class="loading"></span>上傳中...'
 
-      const response = await this.apiCall('/cookies', 'PUT', {
+      const response = await this.apiCall('/api/cookies', 'PUT', {
         value: this.cookieJsonString,
       })
 
