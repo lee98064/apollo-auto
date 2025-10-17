@@ -38,7 +38,10 @@ const parseJobConfig = (rawConfig: string | null): JobExecutionConfig => {
       skipLeaves: Boolean(parsed?.skipLeaves),
     }
   } catch {
-    throw new Error('Invalid job data payload.')
+    return {
+      skipHoliday: false,
+      skipLeaves: false,
+    }
   }
 }
 
@@ -311,12 +314,7 @@ const executeJob = async (
       const punchResult = await requestPunch(attendanceType, cookies)
       success = punchResult.success
       status = punchResult.success ? JobStatus.SUCCESS : JobStatus.FAILED
-      payload = buildPunchPayload(
-        punchResult,
-        config,
-        timeZone,
-        calendarDay
-      )
+      payload = buildPunchPayload(punchResult, config, timeZone, calendarDay)
 
       console.log(
         `[Apollo-${jobType}] Job ${job.id} execution ${
@@ -366,7 +364,6 @@ const processJobs = async (jobType: JobType): Promise<boolean> => {
   })
 
   if (jobs.length === 0) {
-    console.log(`[Apollo-${jobType}] No due jobs to process.`)
     return true
   }
 

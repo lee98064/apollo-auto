@@ -1,4 +1,5 @@
 import JobManager from 'jobManager'
+import cors from 'cors'
 import express from 'express'
 import { middleware as openApiValidator } from 'express-openapi-validator'
 import swaggerUi from 'swagger-ui-express'
@@ -8,6 +9,12 @@ import { getOpenApiSpecPath, loadOpenApiDocument } from './swagger'
 
 const app = express()
 
+app.use(
+  cors({
+    origin: '*',
+    credentials: true,
+  })
+)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 

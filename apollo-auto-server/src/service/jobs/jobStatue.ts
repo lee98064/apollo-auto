@@ -87,8 +87,6 @@ const setJobStatus = async (): Promise<boolean> => {
         ', '
       )}.`
     )
-  } else {
-    console.log('[Apollo-CheckIn] Set job status task executed. No updates.')
   }
 
   return true
