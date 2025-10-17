@@ -371,7 +371,10 @@ class ApolloAutoExtension {
     document.getElementById('jobStartTime').value = ''
     document.getElementById('jobEndTime').value = ''
     document.getElementById('jobExpireTime').value = ''
+    document.getElementById('jobSkipHoliday').checked = false
+    document.getElementById('jobSkipLeaves').checked = false
     document.getElementById('jobIsActive').checked = true
+    document.getElementById('createJobBtn').textContent = '新增排程'
   }
 
   async createJob() {
@@ -390,12 +393,20 @@ class ApolloAutoExtension {
         throw new Error('請選擇開始時間')
       }
 
+      // Collect execution settings
+      const skipHoliday = document.getElementById('jobSkipHoliday').checked
+      const skipLeaves = document.getElementById('jobSkipLeaves').checked
+
       const jobData = {
         type: document.getElementById('jobType').value,
         startAt: new Date(startTime).toISOString(),
         endAt: endTime ? new Date(endTime).toISOString() : null,
         expiredAt: expireTime ? new Date(expireTime).toISOString() : null,
         isActive: document.getElementById('jobIsActive').checked,
+        data: JSON.stringify({
+          skipHoliday,
+          skipLeaves,
+        }),
       }
 
       this.debugLog(isEditing ? 'Updating job:' : 'Creating job:', jobData)
@@ -440,7 +451,9 @@ class ApolloAutoExtension {
 
       if (response.success) {
         // Update the job in currentJobs array
-        const jobIndex = this.currentJobs.findIndex(j => j.id === numericJobId)
+        const jobIndex = this.currentJobs.findIndex(
+          (j) => j.id === numericJobId
+        )
         if (jobIndex !== -1) {
           this.currentJobs[jobIndex].isActive = isActive
         }
@@ -453,7 +466,7 @@ class ApolloAutoExtension {
           `排程已${isActive ? '啟用' : '停用'}`,
           'success'
         )
-        
+
         // Only reload if we couldn't find the job locally
         if (jobIndex === -1) {
           this.loadJobs()
@@ -468,18 +481,20 @@ class ApolloAutoExtension {
   }
 
   updateToggleButton(jobId, isActive) {
-    const button = document.querySelector(`[data-job-id="${jobId}"].toggle-job-btn`)
+    const button = document.querySelector(
+      `[data-job-id="${jobId}"].toggle-job-btn`
+    )
     if (button) {
       // Update button text
       button.textContent = isActive ? '停用' : '啟用'
-      
+
       // Update button classes
       button.classList.remove('success', 'warning')
       button.classList.add(isActive ? 'warning' : 'success')
-      
+
       // Update data attribute
       button.setAttribute('data-is-active', isActive.toString())
-      
+
       this.debugLog('Updated toggle button for job:', { jobId, isActive })
     }
   }
@@ -526,6 +541,24 @@ class ApolloAutoExtension {
       }
 
       document.getElementById('jobIsActive').checked = job.isActive
+
+      // Parse and populate data settings
+      let skipHoliday = false
+      let skipLeaves = false
+
+      if (job.data) {
+        try {
+          const parsedData =
+            typeof job.data === 'string' ? JSON.parse(job.data) : job.data
+          skipHoliday = Boolean(parsedData?.skipHoliday)
+          skipLeaves = Boolean(parsedData?.skipLeaves)
+        } catch (error) {
+          console.warn('Failed to parse job data:', error)
+        }
+      }
+
+      document.getElementById('jobSkipHoliday').checked = skipHoliday
+      document.getElementById('jobSkipLeaves').checked = skipLeaves
 
       // Show form and update button text
       document.getElementById('addJobForm').style.display = 'block'
