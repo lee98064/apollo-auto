@@ -68,8 +68,13 @@ class ApolloAutoExtension {
   }
 
   setupTabs() {
+    const statusTab = document.getElementById('statusTab')
     const cookieTab = document.getElementById('cookieTab')
     const jobTab = document.getElementById('jobTab')
+
+    statusTab.addEventListener('click', () => {
+      this.switchTab('status')
+    })
 
     cookieTab.addEventListener('click', () => {
       this.switchTab('cookie')
@@ -77,7 +82,6 @@ class ApolloAutoExtension {
 
     jobTab.addEventListener('click', () => {
       this.switchTab('job')
-      this.loadJobs()
     })
   }
 
@@ -96,8 +100,10 @@ class ApolloAutoExtension {
 
     this.debugLog('Switched to tab:', tabName)
 
-    // Load jobs after tab switch if switching to job tab
-    if (tabName === 'job') {
+    // Load appropriate content based on tab
+    if (tabName === 'status') {
+      this.loadJobStatus()
+    } else if (tabName === 'job') {
       // Use setTimeout to ensure DOM is updated
       setTimeout(() => {
         this.loadJobs()
@@ -110,9 +116,13 @@ class ApolloAutoExtension {
     document
       .getElementById('saveSettings')
       .addEventListener('click', () => this.saveSettingsHandler())
-    document
-      .getElementById('settingsBackBtn')
-      .addEventListener('click', () => this.showLoginPage())
+    document.getElementById('settingsBackBtn').addEventListener('click', () => {
+      if (this.authToken && this.currentUser) {
+        this.showMainPage()
+      } else {
+        this.showLoginPage()
+      }
+    })
 
     // Navigation
     document
@@ -190,8 +200,10 @@ class ApolloAutoExtension {
   showMainPage() {
     this.showPage('mainPage')
     this.updateUserInfo()
-    // Load jobs when showing main page and job tab is active
-    if (document.getElementById('jobTab').classList.contains('active')) {
+    // Load appropriate content based on active tab
+    if (document.getElementById('statusTab').classList.contains('active')) {
+      this.loadJobStatus()
+    } else if (document.getElementById('jobTab').classList.contains('active')) {
       this.loadJobs()
     }
   }
@@ -199,10 +211,9 @@ class ApolloAutoExtension {
   updateUserInfo() {
     if (this.currentUser) {
       this.debugLog('Updating user info display')
-      document.getElementById('userName').textContent =
+      const displayName =
         this.currentUser.displayName || this.currentUser.account || '未知使用者'
-      document.getElementById('userAccount').textContent =
-        this.currentUser.account || ''
+      document.getElementById('userName').textContent = `您好，${displayName}`
     }
   }
 
@@ -583,6 +594,142 @@ class ApolloAutoExtension {
     }, 5000)
 
     this.debugLog('Status shown:', { elementId, message, type })
+  }
+
+  // Status Monitoring Functions
+  async loadJobStatus() {
+    try {
+      this.debugLog('Loading job status')
+
+      const response = await this.apiCall('/api/jobs', 'GET')
+
+      if (response.success) {
+        const jobs = response.result.jobs || []
+        this.updateStatusOverview(jobs)
+        this.renderJobStatusList(jobs)
+      } else {
+        throw new Error(response.error?.message || '載入排程狀態失敗')
+      }
+    } catch (error) {
+      console.error('Load job status failed:', error)
+      this.showStatus('statusTabStatus', error.message, 'error')
+      this.renderStatusEmptyState('載入狀態失敗')
+    }
+  }
+
+  updateStatusOverview(jobs) {
+    const totalJobs = jobs.length
+    const activeJobs = jobs.filter((job) => job.isActive).length
+
+    // Find the most recent execution
+    let lastExecution = '-'
+    const jobsWithExecution = jobs.filter((job) => job.lastExecutedAt)
+    if (jobsWithExecution.length > 0) {
+      const mostRecent = jobsWithExecution.reduce((latest, job) => {
+        return new Date(job.lastExecutedAt) > new Date(latest.lastExecutedAt)
+          ? job
+          : latest
+      })
+      lastExecution = this.formatDateTime(mostRecent.lastExecutedAt)
+    }
+
+    // Check if elements exist before updating
+    const totalElement = document.getElementById('totalJobs')
+    const activeElement = document.getElementById('activeJobs')
+    const lastElement = document.getElementById('lastExecution')
+
+    if (totalElement) totalElement.textContent = totalJobs
+    if (activeElement) activeElement.textContent = activeJobs
+    if (lastElement) lastElement.textContent = lastExecution
+  }
+
+  renderJobStatusList(jobs) {
+    const statusList = document.getElementById('jobStatusList')
+    const emptyState = document.getElementById('statusEmptyState')
+
+    // Check if elements exist before proceeding
+    if (!statusList || !emptyState) {
+      this.debugLog('Status elements not found, skipping render')
+      return
+    }
+
+    if (jobs.length === 0) {
+      this.renderStatusEmptyState('目前沒有排程')
+      return
+    }
+
+    emptyState.style.display = 'none'
+
+    const statusHtml = jobs.map((job) => this.renderJobStatusCard(job)).join('')
+    statusList.innerHTML = statusHtml
+  }
+
+  renderJobStatusCard(job) {
+    const statusClass = job.isActive ? 'active' : 'inactive'
+    const statusText = job.isActive ? '啟用' : '停用'
+    const typeText = job.type === 'CHECK_IN' ? '上班打卡' : '下班打卡'
+
+    let executionInfo = '尚未執行'
+    if (job.lastExecutedAt) {
+      const status = job.lastExecutionStatus || 'UNKNOWN'
+      const statusTexts = {
+        SUCCESS: '成功',
+        FAILED: '失敗',
+        SKIPPED: '跳過',
+        UNKNOWN: '未知',
+      }
+      executionInfo = `${this.formatDateTime(job.lastExecutedAt)} - ${statusTexts[status] || status}`
+    }
+
+    let nextExecution = '無'
+    if (job.nextExecutionAt) {
+      nextExecution = this.formatDateTime(job.nextExecutionAt)
+    }
+
+    return `
+      <div class="job-status-card ${statusClass}">
+        <div class="job-status-header">
+          <div class="job-status-title">${typeText} (ID: ${job.id})</div>
+          <div class="job-status-badge ${statusClass}">${statusText}</div>
+        </div>
+        <div class="job-status-info">
+          <div>開始時間：${this.formatDateTime(job.startAt)}</div>
+          <div>下次執行：${nextExecution}</div>
+          <div>上次執行：${executionInfo}</div>
+          ${job.expiredAt ? `<div>過期時間：${this.formatDateTime(job.expiredAt)}</div>` : ''}
+        </div>
+      </div>
+    `
+  }
+
+  renderStatusEmptyState(message) {
+    const statusList = document.getElementById('jobStatusList')
+    const emptyState = document.getElementById('statusEmptyState')
+
+    // Check if elements exist before proceeding
+    if (!statusList || !emptyState) {
+      this.debugLog('Status elements not found for empty state')
+      return
+    }
+
+    statusList.innerHTML = ''
+    emptyState.innerHTML = `
+      <div class="empty-state-icon">📊</div>
+      <div>${message}</div>
+    `
+    emptyState.style.display = 'block'
+  }
+
+  formatDateTime(dateString) {
+    if (!dateString) return '-'
+    const date = new Date(dateString)
+    return date.toLocaleString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
 
   debugLog(message, data = null) {
