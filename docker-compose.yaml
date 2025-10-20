@@ -23,5 +23,19 @@ services:
     depends_on:
       - mysql
 
+  apollo-auto-server:
+    build:
+      context: ./apollo-auto-server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql://apollo-auto:apollo-auto-password@mysql:3306/apollo-auto
+      JWT_SECRET: "your_jwt_secret_key"
+      PORT: 4000
+    ports:
+      - "4000:4000"
+    depends_on:
+      - mysql
+
 volumes:
   mysql-data:
