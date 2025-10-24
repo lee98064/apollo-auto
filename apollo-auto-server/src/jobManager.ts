@@ -1,6 +1,7 @@
 import schedule from 'node-schedule'
 import { setJobStatus } from './service/jobs/jobStatue'
 import { checkIn, checkOut } from './service/jobs/punch'
+import { refreshApolloCookies } from './service/jobs/refreshApolloCookies'
 import env from './utils/env'
 
 class JobManager {
@@ -12,6 +13,11 @@ class JobManager {
     this.scheduleJob('SET_JOB_STATUS', '*/1 * * * * *', setJobStatus)
     this.scheduleJob('CHECK_IN', env.CHECK_IN_JOB_SCHEDULE, checkIn)
     this.scheduleJob('CHECK_OUT', env.CHECK_IN_JOB_SCHEDULE, checkOut)
+    this.scheduleJob(
+      'REFRESH_APOLLO_COOKIES',
+      env.COOKIE_REFRESH_JOB_SCHEDULE,
+      refreshApolloCookies
+    )
   }
 
   async scheduleJob(
