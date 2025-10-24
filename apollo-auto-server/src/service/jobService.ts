@@ -5,12 +5,13 @@ import type {
   PrismaClient,
 } from '@prisma/client'
 import { NotFoundError } from 'dto/response'
+import { calculateNextExecutionAt } from 'utils/jobTime'
 
 type CreateJobInput = {
   userId: number
   type: JobType
-  startAt: Date
-  endAt?: Date | null
+  startAt: string
+  endAt?: string | null
   isActive?: boolean
   expiredAt?: Date | null
   data?: string | null
@@ -20,8 +21,8 @@ type UpdateJobInput = {
   userId: number
   jobId: number
   type?: JobType
-  startAt?: Date
-  endAt?: Date | null
+  startAt?: string
+  endAt?: string | null
   isActive?: boolean
   expiredAt?: Date | null
   data?: string | null
@@ -46,6 +47,12 @@ export default class JobService {
     expiredAt,
     data,
   }: CreateJobInput): Promise<Job> {
+    const now = new Date()
+    const nextExecutionAt =
+      isActive === false
+        ? null
+        : calculateNextExecutionAt(startAt, endAt ?? null, now)
+
     return this.prisma.job.create({
       data: {
         userId,
@@ -54,7 +61,7 @@ export default class JobService {
         endAt: endAt ?? null,
         isActive: isActive ?? true,
         expiredAt: expiredAt ?? null,
-        nextExecutionAt: startAt,
+        nextExecutionAt,
         data: data ?? null,
       },
     })
@@ -86,7 +93,6 @@ export default class JobService {
 
     if (typeof startAt !== 'undefined') {
       updateData.startAt = startAt
-      updateData.nextExecutionAt = startAt
     }
 
     if (typeof endAt !== 'undefined') {
@@ -103,6 +109,27 @@ export default class JobService {
 
     if (typeof data !== 'undefined') {
       updateData.data = data ?? null
+    }
+
+    if (
+      typeof startAt !== 'undefined' ||
+      typeof endAt !== 'undefined' ||
+      typeof isActive !== 'undefined'
+    ) {
+      const nextStartAt =
+        typeof startAt !== 'undefined' ? startAt : existingJob.startAt
+      const nextEndAt =
+        typeof endAt !== 'undefined'
+          ? endAt ?? null
+          : existingJob.endAt
+      const nextIsActive =
+        typeof isActive !== 'undefined'
+          ? isActive
+          : existingJob.isActive
+
+      updateData.nextExecutionAt = nextIsActive
+        ? calculateNextExecutionAt(nextStartAt, nextEndAt, new Date())
+        : null
     }
 
     return this.prisma.job.update({

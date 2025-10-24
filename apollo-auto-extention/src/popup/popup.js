@@ -1,3 +1,5 @@
+const TIME_PATTERN = /^\d{2}:\d{2}$/
+
 class ApolloAutoExtension {
   constructor() {
     this.debugLog('Extension initialized')
@@ -270,10 +272,11 @@ class ApolloAutoExtension {
     const statusText = job.isActive ? '啟用' : '停用'
     const typeText = job.type === 'CHECK_IN' ? '上班打卡' : '下班打卡'
 
-    const formatDate = (dateString) => {
-      if (!dateString) return '未設定'
-      return new Date(dateString).toLocaleString('zh-TW')
-    }
+    const startDisplay = this.formatJobTime(job.startAt, '未設定')
+    const endDisplay = this.formatJobTime(job.endAt, '未設定')
+    const expiredDisplay = job.expiredAt
+      ? this.formatDateTime(job.expiredAt)
+      : '未設定'
 
     return `
       <div class="job-card" data-job-id="${job.id}">
@@ -284,15 +287,15 @@ class ApolloAutoExtension {
         <div class="job-details">
           <div class="job-detail">
             <div class="job-detail-label">開始時間</div>
-            <div class="job-detail-value">${formatDate(job.startAt)}</div>
+            <div class="job-detail-value">${startDisplay}</div>
           </div>
           <div class="job-detail">
             <div class="job-detail-label">結束時間</div>
-            <div class="job-detail-value">${formatDate(job.endAt)}</div>
+            <div class="job-detail-value">${endDisplay}</div>
           </div>
           <div class="job-detail">
             <div class="job-detail-label">過期時間</div>
-            <div class="job-detail-value">${formatDate(job.expiredAt)}</div>
+            <div class="job-detail-value">${expiredDisplay}</div>
           </div>
           <div class="job-detail">
             <div class="job-detail-label">狀態</div>
@@ -360,10 +363,14 @@ class ApolloAutoExtension {
 
     // Set default start time to current time
     const now = new Date()
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
-    document.getElementById('jobStartTime').value = now
-      .toISOString()
-      .slice(0, 16)
+    const defaultTime = `${now
+      .getHours()
+      .toString()
+      .padStart(2, '0')}:${now
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}`
+    document.getElementById('jobStartTime').value = defaultTime
 
     this.editingJobId = null
     this.debugLog('Showing add job form')
@@ -410,14 +417,22 @@ class ApolloAutoExtension {
 
       const jobData = {
         type: document.getElementById('jobType').value,
-        startAt: new Date(startTime).toISOString(),
-        endAt: endTime ? new Date(endTime).toISOString() : null,
+        startAt: startTime.trim(),
+        endAt: endTime ? endTime.trim() : null,
         expiredAt: expireTime ? new Date(expireTime).toISOString() : null,
         isActive: document.getElementById('jobIsActive').checked,
         data: JSON.stringify({
           skipHoliday,
           skipLeaves,
         }),
+      }
+
+      if (!TIME_PATTERN.test(jobData.startAt)) {
+        throw new Error('開始時間格式需為 HH:mm')
+      }
+
+      if (jobData.endAt && !TIME_PATTERN.test(jobData.endAt)) {
+        throw new Error('結束時間格式需為 HH:mm')
       }
 
       this.debugLog(isEditing ? 'Updating job:' : 'Creating job:', jobData)
@@ -523,23 +538,12 @@ class ApolloAutoExtension {
       // Fill form with job data
       document.getElementById('jobType').value = job.type
 
-      if (job.startAt) {
-        const startTime = new Date(job.startAt)
-        startTime.setMinutes(
-          startTime.getMinutes() - startTime.getTimezoneOffset()
-        )
-        document.getElementById('jobStartTime').value = startTime
-          .toISOString()
-          .slice(0, 16)
-      }
-
-      if (job.endAt) {
-        const endTime = new Date(job.endAt)
-        endTime.setMinutes(endTime.getMinutes() - endTime.getTimezoneOffset())
-        document.getElementById('jobEndTime').value = endTime
-          .toISOString()
-          .slice(0, 16)
-      }
+      document.getElementById('jobStartTime').value = this.normalizeTimeInput(
+        job.startAt
+      )
+      document.getElementById('jobEndTime').value = this.normalizeTimeInput(
+        job.endAt
+      )
 
       if (job.expiredAt) {
         const expireTime = new Date(job.expiredAt)
@@ -693,7 +697,7 @@ class ApolloAutoExtension {
           <div class="job-status-badge ${statusClass}">${statusText}</div>
         </div>
         <div class="job-status-info">
-          <div>開始時間：${this.formatDateTime(job.startAt)}</div>
+          <div>開始時間：${this.formatJobTime(job.startAt, '-')}</div>
           <div>下次執行：${nextExecution}</div>
           <div>上次執行：${executionInfo}</div>
           ${job.expiredAt ? `<div>過期時間：${this.formatDateTime(job.expiredAt)}</div>` : ''}
@@ -720,9 +724,57 @@ class ApolloAutoExtension {
     emptyState.style.display = 'block'
   }
 
+  formatJobTime(value, fallback = '-') {
+    if (!value) return fallback
+    if (typeof value === 'string' && TIME_PATTERN.test(value)) {
+      return value
+    }
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+      return fallback
+    }
+
+    return `${date
+      .getHours()
+      .toString()
+      .padStart(2, '0')}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}`
+  }
+
+  normalizeTimeInput(value) {
+    if (!value) return ''
+    if (typeof value === 'string' && TIME_PATTERN.test(value)) {
+      return value
+    }
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+      return ''
+    }
+
+    return `${date
+      .getHours()
+      .toString()
+      .padStart(2, '0')}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}`
+  }
+
   formatDateTime(dateString) {
     if (!dateString) return '-'
+    if (typeof dateString === 'string' && TIME_PATTERN.test(dateString)) {
+      return dateString
+    }
+
     const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) {
+      return dateString
+    }
+
     return date.toLocaleString('zh-TW', {
       year: 'numeric',
       month: '2-digit',

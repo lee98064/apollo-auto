@@ -3,6 +3,7 @@ import { BadRequestError, createSuccessResponse } from 'dto/response'
 import type { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import type JobService from 'service/jobService'
+import { validateTimeString } from 'utils/jobTime'
 
 type CreateJobRequestBody = {
   type: JobType
@@ -14,6 +15,32 @@ type CreateJobRequestBody = {
 }
 
 type UpdateJobRequestBody = Partial<CreateJobRequestBody>
+
+const parseTime = (value: string, field: string): string => {
+  const trimmed = value.trim()
+
+  try {
+    validateTimeString(trimmed)
+    return trimmed
+  } catch {
+    throw new BadRequestError(`Invalid ${field} value. Expected HH:mm.`)
+  }
+}
+
+const parseOptionalTime = (
+  value: string | null | undefined,
+  field: string
+): string | null | undefined => {
+  if (typeof value === 'undefined') {
+    return undefined
+  }
+
+  if (value === null) {
+    return null
+  }
+
+  return parseTime(value, field)
+}
 
 const parseDate = (value: string, field: string): Date => {
   const parsed = new Date(value)
@@ -88,8 +115,8 @@ export default class JobController {
     const job = await this.jobService.createJob({
       userId: user.id,
       type,
-      startAt: parseDate(startAt, 'startAt'),
-      endAt: parseOptionalDate(endAt, 'endAt'),
+      startAt: parseTime(startAt, 'startAt'),
+      endAt: parseOptionalTime(endAt, 'endAt'),
       isActive,
       expiredAt: parseOptionalDate(expiredAt, 'expiredAt'),
       data: parseData(data),
@@ -133,8 +160,8 @@ export default class JobController {
       startAt:
         typeof startAt === 'undefined'
           ? undefined
-          : parseDate(startAt, 'startAt'),
-      endAt: parseOptionalDate(endAt, 'endAt'),
+          : parseTime(startAt, 'startAt'),
+      endAt: parseOptionalTime(endAt, 'endAt'),
       isActive,
       expiredAt: parseOptionalDate(expiredAt, 'expiredAt'),
       data: parseData(data),
