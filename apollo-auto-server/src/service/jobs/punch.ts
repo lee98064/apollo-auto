@@ -1,6 +1,7 @@
 import { JobStatus, JobType, type Prisma } from '@prisma/client'
 import type { CalendarDay, CookieEntry, PunchResult } from 'utils/apollo'
 import { fetchCalendar, punch as requestPunch } from 'utils/apollo'
+import { parseCookies } from 'utils/cookies'
 import prisma from 'utils/prisma'
 
 type JobWithUser = Prisma.JobGetPayload<{
@@ -43,70 +44,6 @@ const parseJobConfig = (rawConfig: string | null): JobExecutionConfig => {
       skipLeaves: false,
     }
   }
-}
-
-const normalizeCookie = (entry: unknown): CookieEntry | null => {
-  if (
-    typeof entry === 'object' &&
-    entry !== null &&
-    'name' in entry &&
-    'value' in entry
-  ) {
-    const name = String((entry as { name: unknown }).name).trim()
-    const value = String((entry as { value: unknown }).value).trim()
-    if (name && value) {
-      return { name, value }
-    }
-  }
-
-  return null
-}
-
-const parseCookies = (rawValue: string): CookieEntry[] => {
-  if (!rawValue.trim()) {
-    throw new Error('Stored Apollo cookie is empty.')
-  }
-
-  try {
-    const parsed = JSON.parse(rawValue) as unknown
-    const arrayCandidate = Array.isArray(parsed)
-      ? parsed
-      : Array.isArray((parsed as { cookies?: unknown[] } | undefined)?.cookies)
-        ? (parsed as { cookies?: unknown[] }).cookies
-        : null
-
-    if (arrayCandidate) {
-      const normalized = arrayCandidate
-        .map(normalizeCookie)
-        .filter((cookie): cookie is CookieEntry => cookie !== null)
-
-      if (normalized.length > 0) {
-        return normalized
-      }
-    }
-  } catch {
-    // fall through to raw parsing
-  }
-
-  const fallback = rawValue
-    .split(';')
-    .map((chunk) => chunk.trim())
-    .filter(Boolean)
-    .map((chunk) => {
-      const [name, ...valueParts] = chunk.split('=')
-      const value = valueParts.join('=').trim()
-      if (!name || !value) {
-        return null
-      }
-      return { name: name.trim(), value }
-    })
-    .filter((cookie): cookie is CookieEntry => cookie !== null)
-
-  if (fallback.length === 0) {
-    throw new Error('Unable to parse Apollo cookie.')
-  }
-
-  return fallback
 }
 
 const getDateParts = (date: Date, timeZone: string) => {
