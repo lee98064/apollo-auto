@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Apollo Auto (Vue)",
+  "description": "Apollo 自動打卡系統客戶端 - Vue 版本",
+  "version": "0.3.0",
+  "minimum_chrome_version": "110",
+  "action": {
+    "default_title": "Apollo Auto",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["cookies", "storage", "alarms", "webRequest"],
+  "host_permissions": ["https://*.mayohr.com/*", "http://localhost:*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}
