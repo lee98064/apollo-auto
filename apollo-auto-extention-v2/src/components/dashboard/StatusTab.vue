@@ -1,15 +1,10 @@
 <template>
   <div class="tab-section">
-    <el-alert
-      v-if="store.statuses.statusTab.visible"
-      :title="store.statuses.statusTab.message"
-      :type="store.statuses.statusTab.type"
-      show-icon
-      class="tab-section__alert"
-    />
+    <el-alert v-if="store.statuses.statusTab.visible" :title="store.statuses.statusTab.message"
+      :type="store.statuses.statusTab.type" show-icon class="tab-section__alert" />
 
     <el-row :gutter="12" class="status-overview-row">
-      <el-col :span="8">
+      <el-col :span="12">
         <el-card shadow="hover">
           <div class="status-metric">
             <span class="status-metric__label">總排程數量</span>
@@ -19,7 +14,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="12">
         <el-card shadow="hover">
           <div class="status-metric">
             <span class="status-metric__label">啟用排程</span>
@@ -29,7 +24,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="24">
         <el-card shadow="hover">
           <div class="status-metric">
             <span class="status-metric__label">上次執行</span>
@@ -46,13 +41,8 @@
         <el-empty :description="store.statusEmptyMessage" />
       </template>
       <template v-else>
-        <el-card
-          v-for="job in store.statusJobs"
-          :key="job.id"
-          class="status-card"
-          :class="job.isActive ? 'is-active' : 'is-inactive'"
-          shadow="hover"
-        >
+        <el-card v-for="job in store.statusJobs" :key="job.id" class="status-card"
+          :class="job.isActive ? 'is-active' : 'is-inactive'" shadow="hover">
           <div class="status-card__header">
             <div>
               <h4>{{ jobTypeLabel(job.type) }} (ID: {{ job.id }})</h4>

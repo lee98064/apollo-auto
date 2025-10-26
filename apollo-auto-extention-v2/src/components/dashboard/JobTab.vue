@@ -58,25 +58,31 @@
             </el-select>
           </el-form-item>
 
-          <el-form-item label="開始時間">
+          <el-form-item label="排程亂數起始時間">
             <el-time-picker v-model="store.jobForm.startTime" format="HH:mm" value-format="HH:mm" placeholder="選擇時間" />
           </el-form-item>
 
-          <el-form-item label="結束時間（可選）">
+          <el-form-item label="排程亂數結束時間">
             <el-time-picker v-model="store.jobForm.endTime" format="HH:mm" value-format="HH:mm" placeholder="選擇時間"
               clearable />
           </el-form-item>
 
-          <el-form-item label="過期時間（可選）">
+          <el-form-item label="排程過期時間（可選）">
             <el-date-picker v-model="store.jobForm.expireTime" type="datetime" format="YYYY-MM-DD HH:mm"
               value-format="YYYY-MM-DDTHH:mm" placeholder="選擇日期時間" clearable />
           </el-form-item>
 
           <el-form-item label="執行設定">
-            <el-space direction="vertical">
-              <el-switch v-model="store.jobForm.skipHoliday" active-text="跳過假日" />
-              <el-switch v-model="store.jobForm.skipLeaves" active-text="跳過請假日" />
-            </el-space>
+            <div class="job-switch-group">
+              <label class="job-switch-row">
+                <el-switch v-model="store.jobForm.skipHoliday" />
+                <span>跳過假日</span>
+              </label>
+              <label class="job-switch-row">
+                <el-switch v-model="store.jobForm.skipLeaves" />
+                <span>跳過請假日</span>
+              </label>
+            </div>
           </el-form-item>
 
           <el-form-item label="立即啟用">
@@ -168,5 +174,19 @@ const {
 
 .job-add-btn {
   align-self: flex-start;
+}
+
+.job-switch-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.job-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4a4a4a;
 }
 </style>
