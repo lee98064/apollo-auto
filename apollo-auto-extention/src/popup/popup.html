@@ -405,6 +405,94 @@
             font-size: 16px;
         }
 
+        /* Telegram Styles */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #e6f4ea;
+            color: #188038;
+        }
+
+        .badge-secondary {
+            background: #f1f3f4;
+            color: #5f6368;
+        }
+
+        .telegram-form {
+            background: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .telegram-form h3 {
+            margin: 0 0 16px 0;
+            color: #202124;
+            font-size: 16px;
+        }
+
+        .telegram-card {
+            background: #ffffff;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .telegram-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .telegram-token-name {
+            font-weight: 600;
+            color: #202124;
+            font-size: 14px;
+        }
+
+        .telegram-card-body {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .telegram-field {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #5f6368;
+        }
+
+        .telegram-field .label {
+            font-weight: 500;
+        }
+
+        .telegram-field .value {
+            color: #202124;
+            font-weight: 500;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        .telegram-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .telegram-card-actions .button {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -643,6 +731,7 @@
             <div class="tab-header">
                 <button class="tab-button active" id="statusTab">狀態監控</button>
                 <button class="tab-button" id="cookieTab">Cookie 管理</button>
+                <button class="tab-button" id="telegramTab">Telegram 通知</button>
                 <button class="tab-button" id="jobTab">排程管理</button>
             </div>
 
@@ -697,6 +786,52 @@
                 </div>
 
                 <button id="logoutBtn" class="button danger">登出</button>
+            </div>
+
+            <!-- Telegram Notification Tab -->
+            <div class="tab-content" id="telegramContent">
+                <div id="telegramStatus" class="status" style="display: none;"></div>
+
+                <div class="telegram-form" id="telegramTokenForm" style="display: none;">
+                    <h3 id="telegramFormTitle">新增 Telegram Token</h3>
+
+                    <div class="form-group">
+                        <label for="telegramTokenName">Token 名稱（可選）</label>
+                        <input type="text" id="telegramTokenName" placeholder="例如：個人通知">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="telegramBotToken">Bot Token</label>
+                        <input type="text" id="telegramBotToken" placeholder="輸入 Telegram Bot Token">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="telegramChatId">Chat ID</label>
+                        <input type="text" id="telegramChatId" placeholder="輸入接收通知的 Chat ID">
+                    </div>
+
+                    <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                        <label class="switch">
+                            <input type="checkbox" id="telegramIsActive" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <label for="telegramIsActive">啟用通知</label>
+                    </div>
+
+                    <div style="display: flex; gap: 8px;">
+                        <button id="saveTelegramTokenBtn" class="button" style="flex: 1;">新增</button>
+                        <button id="cancelTelegramTokenBtn" class="button secondary" style="flex: 1;">取消</button>
+                    </div>
+                </div>
+
+                <button id="addTelegramTokenBtn" class="button success">新增 Telegram Token</button>
+
+                <div id="telegramTokenList">
+                    <div class="empty-state" id="telegramEmptyState">
+                        <div class="empty-state-icon">📨</div>
+                        <div>尚未載入資料</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Job Management Tab -->

@@ -17,6 +17,10 @@ class ApolloAutoExtension {
     // Initialize job management
     this.currentJobs = []
     this.editingJobId = null
+
+    // Initialize Telegram token management
+    this.telegramTokens = []
+    this.editingTelegramTokenId = null
   }
 
   async loadSettings() {
@@ -72,6 +76,7 @@ class ApolloAutoExtension {
   setupTabs() {
     const statusTab = document.getElementById('statusTab')
     const cookieTab = document.getElementById('cookieTab')
+    const telegramTab = document.getElementById('telegramTab')
     const jobTab = document.getElementById('jobTab')
 
     statusTab.addEventListener('click', () => {
@@ -80,6 +85,10 @@ class ApolloAutoExtension {
 
     cookieTab.addEventListener('click', () => {
       this.switchTab('cookie')
+    })
+
+    telegramTab.addEventListener('click', () => {
+      this.switchTab('telegram')
     })
 
     jobTab.addEventListener('click', () => {
@@ -105,6 +114,8 @@ class ApolloAutoExtension {
     // Load appropriate content based on tab
     if (tabName === 'status') {
       this.loadJobStatus()
+    } else if (tabName === 'telegram') {
+      this.loadTelegramTokens()
     } else if (tabName === 'job') {
       // Use setTimeout to ensure DOM is updated
       setTimeout(() => {
@@ -176,6 +187,39 @@ class ApolloAutoExtension {
       .getElementById('cancelJobBtn')
       .addEventListener('click', () => this.hideAddJobForm())
 
+    // Telegram token management
+    const addTelegramTokenBtn = document.getElementById('addTelegramTokenBtn')
+    if (addTelegramTokenBtn) {
+      addTelegramTokenBtn.addEventListener('click', () =>
+        this.showTelegramTokenForm()
+      )
+    }
+
+    const cancelTelegramTokenBtn = document.getElementById(
+      'cancelTelegramTokenBtn'
+    )
+    if (cancelTelegramTokenBtn) {
+      cancelTelegramTokenBtn.addEventListener('click', () =>
+        this.hideTelegramTokenForm()
+      )
+    }
+
+    const saveTelegramTokenBtn = document.getElementById(
+      'saveTelegramTokenBtn'
+    )
+    if (saveTelegramTokenBtn) {
+      saveTelegramTokenBtn.addEventListener('click', () =>
+        this.saveTelegramToken()
+      )
+    }
+
+    const telegramTokenList = document.getElementById('telegramTokenList')
+    if (telegramTokenList) {
+      telegramTokenList.addEventListener('click', (event) =>
+        this.handleTelegramTokenListClick(event)
+      )
+    }
+
     this.debugLog('Event listeners setup complete')
   }
 
@@ -205,6 +249,10 @@ class ApolloAutoExtension {
     // Load appropriate content based on active tab
     if (document.getElementById('statusTab').classList.contains('active')) {
       this.loadJobStatus()
+    } else if (
+      document.getElementById('telegramTab').classList.contains('active')
+    ) {
+      this.loadTelegramTokens()
     } else if (document.getElementById('jobTab').classList.contains('active')) {
       this.loadJobs()
     }
@@ -585,6 +633,416 @@ class ApolloAutoExtension {
       console.error('Edit job failed:', error)
       this.showStatus('jobStatus', error.message, 'error')
     }
+  }
+
+  // Telegram Notification Functions
+  async loadTelegramTokens() {
+    const listElement = document.getElementById('telegramTokenList')
+    const emptyState = document.getElementById('telegramEmptyState')
+
+    if (!listElement || !emptyState) {
+      this.debugLog('Telegram token elements not found, skipping load')
+      return
+    }
+
+    if (!this.authToken) {
+      this.renderTelegramEmptyState('請登入後管理 Telegram Token')
+      return
+    }
+
+    try {
+      this.debugLog('Loading Telegram tokens')
+      const response = await this.apiCall('/api/telegram/tokens', 'GET')
+
+      if (response.success) {
+        this.telegramTokens = response.result?.tokens || []
+        this.renderTelegramTokens()
+      } else {
+        throw new Error(response.error?.message || '載入 Telegram Token 失敗')
+      }
+    } catch (error) {
+      console.error('Load Telegram tokens failed:', error)
+      this.renderTelegramEmptyState('載入失敗')
+      this.showStatus('telegramStatus', error.message, 'error')
+    }
+  }
+
+  renderTelegramTokens() {
+    const listElement = document.getElementById('telegramTokenList')
+    const emptyState = document.getElementById('telegramEmptyState')
+
+    if (!listElement || !emptyState) {
+      this.debugLog('Telegram token elements not found for render')
+      return
+    }
+
+    if (!Array.isArray(this.telegramTokens) || this.telegramTokens.length === 0) {
+      this.renderTelegramEmptyState('尚未設定任何 Telegram Token')
+      return
+    }
+
+    emptyState.style.display = 'none'
+    listElement.innerHTML = this.telegramTokens
+      .map((token) => this.renderTelegramTokenCard(token))
+      .join('')
+  }
+
+  renderTelegramEmptyState(message) {
+    const listElement = document.getElementById('telegramTokenList')
+    const emptyState = document.getElementById('telegramEmptyState')
+
+    if (!listElement || !emptyState) {
+      this.debugLog('Telegram token elements not found for empty state')
+      return
+    }
+
+    listElement.innerHTML = ''
+    emptyState.style.display = 'block'
+    emptyState.innerHTML = `
+      <div class="empty-state-icon">📨</div>
+      <div>${this.escapeHtml(message)}</div>
+    `
+  }
+
+  renderTelegramTokenCard(token) {
+    const tokenId = Number(token.id)
+    const statusClass = token.isActive ? 'badge-success' : 'badge-secondary'
+    const statusText = token.isActive ? '啟用' : '停用'
+    const displayName =
+      typeof token.name === 'string' && token.name.length > 0
+        ? this.escapeHtml(token.name)
+        : '未命名 Token'
+    const maskedToken = this.maskSensitiveValue(token.botToken)
+    const chatIdValue =
+      typeof token.chatId === 'string'
+        ? token.chatId
+        : token.chatId != null
+          ? String(token.chatId)
+          : ''
+    const chatId = this.escapeHtml(chatIdValue)
+
+    return `
+      <div class="telegram-card" data-token-id="${tokenId}">
+        <div class="telegram-card-header">
+          <div class="telegram-token-name">${displayName}</div>
+          <span class="badge ${statusClass}">${statusText}</span>
+        </div>
+        <div class="telegram-card-body">
+          <div class="telegram-field">
+            <span class="label">Bot Token</span>
+            <span class="value">${maskedToken}</span>
+          </div>
+          <div class="telegram-field">
+            <span class="label">Chat ID</span>
+            <span class="value">${chatId}</span>
+          </div>
+        </div>
+        <div class="telegram-card-actions">
+          <button class="button small" data-action="test" data-token-id="${tokenId}">發送測試</button>
+          <button class="button small secondary" data-action="edit" data-token-id="${tokenId}">編輯</button>
+          <button class="button small danger" data-action="delete" data-token-id="${tokenId}">刪除</button>
+        </div>
+      </div>
+    `
+  }
+
+  maskSensitiveValue(value) {
+    if (!value) {
+      return '-'
+    }
+
+    const text = String(value)
+    if (text.length <= 8) {
+      return '****'
+    }
+
+    const masked = `${text.slice(0, 4)}...${text.slice(-4)}`
+    return this.escapeHtml(masked)
+  }
+
+  showTelegramTokenForm(token = null) {
+    const form = document.getElementById('telegramTokenForm')
+    const addBtn = document.getElementById('addTelegramTokenBtn')
+    const title = document.getElementById('telegramFormTitle')
+    const saveBtn = document.getElementById('saveTelegramTokenBtn')
+    const nameInput = document.getElementById('telegramTokenName')
+    const botTokenInput = document.getElementById('telegramBotToken')
+    const chatIdInput = document.getElementById('telegramChatId')
+    const isActiveInput = document.getElementById('telegramIsActive')
+
+    if (!form || !addBtn || !saveBtn || !isActiveInput) {
+      this.debugLog('Telegram form elements missing, cannot show form')
+      return
+    }
+
+    form.style.display = 'block'
+    addBtn.style.display = 'none'
+
+    this.resetTelegramTokenForm()
+
+    if (!token) {
+      if (title) title.textContent = '新增 Telegram Token'
+      saveBtn.textContent = '新增'
+      if (nameInput) nameInput.value = ''
+      if (botTokenInput) botTokenInput.value = ''
+      if (chatIdInput) chatIdInput.value = ''
+      isActiveInput.checked = true
+      return
+    }
+
+    this.editingTelegramTokenId = token.id
+    if (title) title.textContent = '編輯 Telegram Token'
+    saveBtn.textContent = '更新'
+    if (nameInput) nameInput.value = token.name || ''
+    if (botTokenInput) botTokenInput.value = token.botToken || ''
+    if (chatIdInput) chatIdInput.value = token.chatId || ''
+    isActiveInput.checked = Boolean(token.isActive)
+  }
+
+  hideTelegramTokenForm() {
+    const form = document.getElementById('telegramTokenForm')
+    const addBtn = document.getElementById('addTelegramTokenBtn')
+    const title = document.getElementById('telegramFormTitle')
+    const saveBtn = document.getElementById('saveTelegramTokenBtn')
+
+    if (form) form.style.display = 'none'
+    if (addBtn) addBtn.style.display = 'block'
+    if (title) title.textContent = '新增 Telegram Token'
+    if (saveBtn) saveBtn.textContent = '新增'
+
+    this.resetTelegramTokenForm()
+  }
+
+  resetTelegramTokenForm() {
+    const nameInput = document.getElementById('telegramTokenName')
+    const botTokenInput = document.getElementById('telegramBotToken')
+    const chatIdInput = document.getElementById('telegramChatId')
+    const isActiveInput = document.getElementById('telegramIsActive')
+
+    if (nameInput) nameInput.value = ''
+    if (botTokenInput) botTokenInput.value = ''
+    if (chatIdInput) chatIdInput.value = ''
+    if (isActiveInput) isActiveInput.checked = true
+
+    this.editingTelegramTokenId = null
+  }
+
+  async saveTelegramToken() {
+    const saveBtn = document.getElementById('saveTelegramTokenBtn')
+    const nameInput = document.getElementById('telegramTokenName')
+    const botTokenInput = document.getElementById('telegramBotToken')
+    const chatIdInput = document.getElementById('telegramChatId')
+    const isActiveInput = document.getElementById('telegramIsActive')
+
+    if (!saveBtn || !botTokenInput || !chatIdInput || !isActiveInput) {
+      this.debugLog('Telegram form inputs missing, cannot save')
+      return
+    }
+
+    const nameValue = nameInput ? nameInput.value.trim() : ''
+    const botToken = botTokenInput.value.trim()
+    const chatId = chatIdInput.value.trim()
+    const isActive = isActiveInput.checked
+
+    if (!botToken || !chatId) {
+      this.showStatus('telegramStatus', '請填寫 Bot Token 與 Chat ID', 'error')
+      return
+    }
+
+    const payload = {
+      name: nameValue.length > 0 ? nameValue : null,
+      botToken,
+      chatId,
+      isActive,
+    }
+
+    const isEditing = Boolean(this.editingTelegramTokenId)
+    const originalText = saveBtn.textContent
+    saveBtn.disabled = true
+    saveBtn.textContent = isEditing ? '儲存中...' : '新增中...'
+
+    try {
+      const endpoint = isEditing
+        ? `/api/telegram/tokens/${this.editingTelegramTokenId}`
+        : '/api/telegram/tokens'
+
+      const method = isEditing ? 'PUT' : 'POST'
+      const response = await this.apiCall(endpoint, method, payload)
+
+      if (!response.success) {
+        throw new Error(
+          response.error?.message || '儲存 Telegram Token 失敗'
+        )
+      }
+
+      this.showStatus(
+        'telegramStatus',
+        isEditing ? 'Token 已更新' : 'Token 已建立',
+        'success'
+      )
+      this.hideTelegramTokenForm()
+      await this.loadTelegramTokens()
+    } catch (error) {
+      console.error('Save Telegram token failed:', error)
+      this.showStatus(
+        'telegramStatus',
+        '儲存失敗：' + error.message,
+        'error'
+      )
+    } finally {
+      saveBtn.disabled = false
+      saveBtn.textContent = originalText
+    }
+  }
+
+  handleTelegramTokenListClick(event) {
+    const button = event.target.closest('button[data-action]')
+    if (!button) {
+      return
+    }
+
+    const tokenId = parseInt(button.getAttribute('data-token-id') || '', 10)
+    if (Number.isNaN(tokenId)) {
+      return
+    }
+
+    const action = button.getAttribute('data-action')
+    if (action === 'edit') {
+      this.editTelegramToken(tokenId)
+    } else if (action === 'delete') {
+      this.deleteTelegramToken(tokenId, button)
+    } else if (action === 'test') {
+      this.sendTelegramTest(tokenId, button)
+    }
+  }
+
+  editTelegramToken(tokenId) {
+    const token = this.telegramTokens.find((item) => item.id === tokenId)
+    if (!token) {
+      this.showStatus('telegramStatus', '找不到指定的 Token', 'error')
+      return
+    }
+    this.showTelegramTokenForm(token)
+  }
+
+  async deleteTelegramToken(tokenId, triggerButton) {
+    const token = this.telegramTokens.find((item) => item.id === tokenId)
+    if (!token) {
+      this.showStatus('telegramStatus', '找不到指定的 Token', 'error')
+      return
+    }
+
+    const confirmDelete = confirm(
+      `確定要刪除「${token.name || '未命名 Token'}」嗎？`
+    )
+    if (!confirmDelete) {
+      return
+    }
+
+    if (triggerButton) {
+      triggerButton.disabled = true
+    }
+
+    try {
+      const response = await this.apiCall(
+        `/api/telegram/tokens/${tokenId}`,
+        'DELETE'
+      )
+
+      if (!response.success) {
+        throw new Error(
+          response.error?.message || '刪除 Telegram Token 失敗'
+        )
+      }
+
+      this.showStatus('telegramStatus', 'Token 已刪除', 'success')
+      await this.loadTelegramTokens()
+    } catch (error) {
+      console.error('Delete Telegram token failed:', error)
+      this.showStatus(
+        'telegramStatus',
+        '刪除失敗：' + error.message,
+        'error'
+      )
+      if (triggerButton) {
+        triggerButton.disabled = false
+      }
+      return
+    }
+
+    if (triggerButton) {
+      triggerButton.disabled = false
+    }
+  }
+
+  async sendTelegramTest(tokenId, triggerButton) {
+    const token = this.telegramTokens.find((item) => item.id === tokenId)
+    if (!token) {
+      this.showStatus('telegramStatus', '找不到指定的 Token', 'error')
+      return
+    }
+
+    const customMessage = prompt('請輸入測試訊息（可留空使用預設）')
+    if (customMessage === null) {
+      return
+    }
+
+    const payload =
+      customMessage && customMessage.trim().length > 0
+        ? { message: customMessage.trim() }
+        : null
+
+    let originalText = ''
+    if (triggerButton) {
+      originalText = triggerButton.textContent
+      triggerButton.disabled = true
+      triggerButton.textContent = '發送中...'
+    }
+
+    try {
+      const response = await this.apiCall(
+        `/api/telegram/tokens/${tokenId}/test`,
+        'POST',
+        payload
+      )
+
+      if (!response.success) {
+        throw new Error(
+          response.error?.message || '測試訊息發送失敗'
+        )
+      }
+
+      this.showStatus(
+        'telegramStatus',
+        `已發送測試訊息至 ${token.chatId}`,
+        'success'
+      )
+    } catch (error) {
+      console.error('Send Telegram test message failed:', error)
+      this.showStatus(
+        'telegramStatus',
+        '測試訊息發送失敗：' + error.message,
+        'error'
+      )
+    } finally {
+      if (triggerButton) {
+        triggerButton.disabled = false
+        triggerButton.textContent = originalText || '發送測試'
+      }
+    }
+  }
+
+  escapeHtml(value) {
+    if (typeof value !== 'string') {
+      return ''
+    }
+
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
   }
 
   showStatus(elementId, message, type = 'info') {
@@ -1051,6 +1509,10 @@ class ApolloAutoExtension {
     this.debugLog('Logging out user')
     this.authToken = null
     this.currentUser = null
+    this.telegramTokens = []
+    this.editingTelegramTokenId = null
+    this.hideTelegramTokenForm()
+    this.renderTelegramEmptyState('請登入後管理 Telegram Token')
     await this.saveSettings()
 
     // 通知 background script 認證狀態變更
