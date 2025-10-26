@@ -3,6 +3,9 @@ import type { CalendarDay, CookieEntry, PunchResult } from 'utils/apollo'
 import { fetchCalendar, punch as requestPunch } from 'utils/apollo'
 import { parseCookies } from 'utils/cookies'
 import prisma from 'utils/prisma'
+import TelegramService from 'service/telegramService'
+
+const telegramService = new TelegramService(prisma)
 
 type JobWithUser = Prisma.JobGetPayload<{
   include: { user: true }
@@ -274,6 +277,22 @@ const executeJob = async (
     )
   } finally {
     await persistJobExecution(job.id, executedAt, status, payload, jobType)
+    try {
+      await telegramService.notifyJobExecution({
+        userId: job.userId,
+        jobId: job.id,
+        jobType,
+        status,
+        executedAt,
+        timezone: timeZone,
+        payload,
+      })
+    } catch (error) {
+      console.error(
+        `[Apollo-${jobType}] Failed to send Telegram notification for job ${job.id}:`,
+        error instanceof Error ? error.message : error
+      )
+    }
   }
 
   return success
