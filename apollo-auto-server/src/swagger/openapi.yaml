@@ -376,11 +376,13 @@ components:
           $ref: "#/components/schemas/JobType"
         startAt:
           type: string
-          format: date-time
+          pattern: "^\\d{2}:\\d{2}$"
+          description: 24-hour time in HH:mm format.
         endAt:
           type: string
-          format: date-time
+          pattern: "^\\d{2}:\\d{2}$"
           nullable: true
+          description: 24-hour time in HH:mm format.
         data:
           type: string
           nullable: true
@@ -414,11 +416,13 @@ components:
           $ref: "#/components/schemas/JobType"
         startAt:
           type: string
-          format: date-time
+          pattern: "^\\d{2}:\\d{2}$"
+          description: 24-hour time in HH:mm format.
         endAt:
           type: string
-          format: date-time
+          pattern: "^\\d{2}:\\d{2}$"
           nullable: true
+          description: 24-hour time in HH:mm format.
         data:
           type: string
           nullable: true
@@ -436,11 +440,13 @@ components:
           $ref: "#/components/schemas/JobType"
         startAt:
           type: string
-          format: date-time
+          pattern: "^\\d{2}:\\d{2}$"
+          description: 24-hour time in HH:mm format.
         endAt:
           type: string
-          format: date-time
+          pattern: "^\\d{2}:\\d{2}$"
           nullable: true
+          description: 24-hour time in HH:mm format.
         data:
           type: string
           nullable: true

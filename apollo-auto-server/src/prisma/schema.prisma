@@ -60,8 +60,8 @@ model Job {
   id                  Int        @id @default(autoincrement())
   userId              Int
   type                JobType
-  startAt             DateTime
-  endAt               DateTime?
+  startAt             String     @db.Char(5)
+  endAt               String?    @db.Char(5)
   data                String? // JSON string
   nextExecutionAt     DateTime?
   lastExecutedAt      DateTime?
