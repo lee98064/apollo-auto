@@ -145,6 +145,7 @@ export function useAppState() {
     hideAddJobForm,
     submitJobForm,
     editJob,
+    deleteJob,
     toggleJobStatus,
     loadJobStatus,
     loadJobs,
@@ -649,6 +650,59 @@ function editJob(job) {
   state.jobForm.skipLeaves = skipLeaves
 }
 
+async function deleteJob(job) {
+  if (!job || !job.id) {
+    return
+  }
+
+  const jobLabel = jobTypeLabel(job.type)
+  const confirmed =
+    typeof confirm === 'function'
+      ? confirm(`確定要刪除「${jobLabel}」排程 (ID: ${job.id}) 嗎？`)
+      : true
+
+  if (!confirmed) {
+    return
+  }
+
+  updateJobMeta(job.id, { __deleting: true })
+
+  try {
+    const response = await apiCall(`/api/jobs/${job.id}`, 'DELETE')
+
+    if (response.success) {
+      state.jobs = state.jobs.filter((item) => item.id !== job.id)
+      if (state.jobs.length === 0) {
+        state.jobEmptyMessage = '目前沒有排程'
+      }
+
+      state.statusJobs = state.statusJobs.filter(
+        (item) => item.id !== job.id
+      )
+      if (state.statusJobs.length === 0) {
+        state.statusEmptyMessage = '目前沒有排程'
+      }
+
+      if (state.editingJobId === job.id) {
+        hideAddJobForm()
+      }
+
+      showStatus('job', '排程已刪除', 'success')
+
+      if (state.activeTab === 'status') {
+        await loadJobStatus()
+      }
+    } else {
+      throw new Error(response.error?.message || '刪除排程失敗')
+    }
+  } catch (error) {
+    console.error('Delete job failed:', error)
+    showStatus('job', error.message, 'error')
+  } finally {
+    updateJobMeta(job.id, { __deleting: false })
+  }
+}
+
 async function toggleJobStatus(job) {
   try {
     const targetStatus = !job.isActive
@@ -922,6 +976,12 @@ async function sendTelegramTest(token) {
   } finally {
     updateTelegramTokenMeta(token.id, { __testing: false })
   }
+}
+
+function updateJobMeta(id, partial) {
+  state.jobs = state.jobs.map((job) =>
+    job.id === id ? { ...job, ...partial } : job
+  )
 }
 
 function updateTelegramTokenMeta(id, partial) {

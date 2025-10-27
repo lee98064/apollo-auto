@@ -59,24 +59,16 @@ const applyRefreshedValues = (
   return { updatedCookies, changed }
 }
 
-const refreshApolloCookie = async (
-  record: ApolloCookie
-): Promise<boolean> => {
+const refreshApolloCookie = async (record: ApolloCookie): Promise<boolean> => {
   try {
     const cookies = parseCookies(record.value)
     const refreshed = await refreshSessionCookies(cookies)
 
-    if (
-      !refreshed.__ModuleSessionCookie &&
-      !refreshed.__ModuleSessionCookie2
-    ) {
+    if (!refreshed.__ModuleSessionCookie && !refreshed.__ModuleSessionCookie2) {
       throw new Error('Refresh response did not include target cookies.')
     }
 
-    const { updatedCookies, changed } = applyRefreshedValues(
-      cookies,
-      refreshed
-    )
+    const { updatedCookies, changed } = applyRefreshedValues(cookies, refreshed)
 
     if (!changed) {
       console.log(

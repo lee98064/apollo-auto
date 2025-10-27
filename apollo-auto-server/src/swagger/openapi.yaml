@@ -161,6 +161,39 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - jobs
+      summary: Delete a job
+      operationId: deleteJob
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: Job deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobDeleteResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /cookies:
     get:
       tags:
@@ -649,6 +682,20 @@ components:
               properties:
                 job:
                   $ref: "#/components/schemas/Job"
+    JobDeleteResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - type: object
+          required:
+            - result
+          properties:
+            result:
+              type: object
+              required:
+                - deleted
+              properties:
+                deleted:
+                  type: boolean
     ListJobsSuccessResponse:
       allOf:
         - $ref: "#/components/schemas/SuccessResponse"

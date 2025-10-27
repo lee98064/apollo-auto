@@ -47,11 +47,17 @@ export default class JobService {
     expiredAt,
     data,
   }: CreateJobInput): Promise<Job> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { timezone: true },
+    })
+
+    const timeZone = user?.timezone ?? 'UTC'
     const now = new Date()
     const nextExecutionAt =
       isActive === false
         ? null
-        : calculateNextExecutionAt(startAt, endAt ?? null, now)
+        : calculateNextExecutionAt(startAt, endAt ?? null, now, timeZone)
 
     return this.prisma.job.create({
       data: {
@@ -79,6 +85,11 @@ export default class JobService {
   }: UpdateJobInput): Promise<Job> {
     const existingJob = await this.prisma.job.findUnique({
       where: { id: jobId },
+      include: {
+        user: {
+          select: { timezone: true },
+        },
+      },
     })
 
     if (!existingJob || existingJob.userId !== userId) {
@@ -116,6 +127,7 @@ export default class JobService {
       typeof endAt !== 'undefined' ||
       typeof isActive !== 'undefined'
     ) {
+      const timeZone = existingJob.user?.timezone ?? 'UTC'
       const nextStartAt =
         typeof startAt !== 'undefined' ? startAt : existingJob.startAt
       const nextEndAt =
@@ -128,13 +140,38 @@ export default class JobService {
           : existingJob.isActive
 
       updateData.nextExecutionAt = nextIsActive
-        ? calculateNextExecutionAt(nextStartAt, nextEndAt, new Date())
+        ? calculateNextExecutionAt(
+            nextStartAt,
+            nextEndAt,
+            new Date(),
+            timeZone
+          )
         : null
     }
 
     return this.prisma.job.update({
       where: { id: jobId },
       data: updateData,
+    })
+  }
+
+  async deleteJob({
+    userId,
+    jobId,
+  }: {
+    userId: number
+    jobId: number
+  }): Promise<void> {
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+    })
+
+    if (!job || job.userId !== userId) {
+      throw new NotFoundError('Job not found.')
+    }
+
+    await this.prisma.job.delete({
+      where: { id: jobId },
     })
   }
 }

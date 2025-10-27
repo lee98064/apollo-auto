@@ -14,5 +14,6 @@ router.use(isAuthenticated)
 router.get('/jobs', jobController.listJobs)
 router.post('/jobs', jobController.createJob)
 router.put('/jobs/:jobId', jobController.updateJob)
+router.delete('/jobs/:jobId', jobController.deleteJob)
 
 export default router
