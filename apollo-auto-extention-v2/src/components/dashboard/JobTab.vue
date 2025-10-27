@@ -26,7 +26,7 @@
             {{ job.expiredAt ? formatDateTime(job.expiredAt) : '未設定' }}
           </el-descriptions-item>
           <el-descriptions-item label="狀態">
-            {{ job.status || '未知' }}
+            {{ jobStatusLabel(job) }}
           </el-descriptions-item>
         </el-descriptions>
 
@@ -119,6 +119,7 @@ const {
   jobTypeLabel,
   formatJobTime,
   formatDateTime,
+  jobStatusLabel,
   toggleJobStatus,
   editJob,
   deleteJob,

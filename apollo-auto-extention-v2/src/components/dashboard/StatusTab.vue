@@ -60,7 +60,7 @@
             <li v-if="job.expiredAt">
               過期時間：{{ formatDateTime(job.expiredAt) }}
             </li>
-            <li>狀態：{{ job.status || '未知' }}</li>
+            <li>狀態：{{ jobStatusLabel(job) }}</li>
           </ul>
         </el-card>
       </template>
@@ -73,7 +73,7 @@ import { useAppState } from '../../composables/useAppState'
 
 const appState = useAppState()
 const store = appState.state
-const { jobTypeLabel, formatJobTime, formatDateTime, formatExecutionInfo } =
+const { jobTypeLabel, formatJobTime, formatDateTime, formatExecutionInfo, jobStatusLabel } =
   appState
 </script>
 

@@ -159,6 +159,7 @@ export function useAppState() {
     formatJobTime,
     formatDateTime,
     formatExecutionInfo,
+    jobStatusLabel,
     maskSensitiveValue,
   }
 }
@@ -1247,6 +1248,29 @@ function formatExecutionInfo(job) {
 
   const statusText = statusTexts[status] || status
   return `${formatDateTime(job.lastExecutedAt)} - ${statusText}`
+}
+
+function jobStatusLabel(job) {
+  if (!job) {
+    return '未知'
+  }
+
+  const status = job.lastExecutionStatus || null
+
+  const statusTexts = {
+    SUCCESS: '成功',
+    FAILED: '失敗',
+    SKIPPED: '跳過',
+    PENDING: '等待中',
+    UNKNOWN: '未知',
+  }
+
+  if (!status) {
+    return '尚未執行'
+  }
+
+  const normalized = status.toUpperCase()
+  return statusTexts[normalized] || normalized
 }
 
 function jobTypeLabel(type) {
