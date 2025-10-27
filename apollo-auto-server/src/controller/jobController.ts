@@ -16,6 +16,14 @@ type CreateJobRequestBody = {
 
 type UpdateJobRequestBody = Partial<CreateJobRequestBody>
 
+const parseJobId = (value: string | undefined): number => {
+  const jobId = Number.parseInt(value ?? '', 10)
+  if (Number.isNaN(jobId)) {
+    throw new BadRequestError('Invalid job id.')
+  }
+  return jobId
+}
+
 const parseTime = (value: string, field: string): string => {
   const trimmed = value.trim()
 
@@ -135,10 +143,7 @@ export default class JobController {
   ) => {
     const user = req.user
 
-    const jobId = Number.parseInt(req.params.jobId, 10)
-    if (Number.isNaN(jobId)) {
-      throw new BadRequestError('Invalid job id.')
-    }
+    const jobId = parseJobId(req.params.jobId)
 
     const { type, startAt, endAt, isActive, expiredAt, data } = req.body
 
@@ -172,5 +177,20 @@ export default class JobController {
         job,
       })
     )
+  }
+
+  deleteJob = async (
+    req: Request<{ jobId: string }>,
+    res: Response
+  ) => {
+    const user = req.user
+    const jobId = parseJobId(req.params.jobId)
+
+    await this.jobService.deleteJob({
+      userId: user.id,
+      jobId,
+    })
+
+    res.json(createSuccessResponse({ deleted: true }))
   }
 }

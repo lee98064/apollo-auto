@@ -26,7 +26,7 @@
             {{ job.expiredAt ? formatDateTime(job.expiredAt) : '未設定' }}
           </el-descriptions-item>
           <el-descriptions-item label="狀態">
-            {{ job.status || '未知' }}
+            {{ jobStatusLabel(job) }}
           </el-descriptions-item>
         </el-descriptions>
 
@@ -35,6 +35,14 @@
             {{ job.isActive ? '停用' : '啟用' }}
           </el-button>
           <el-button size="small" @click="editJob(job)">編輯</el-button>
+          <el-button
+            type="danger"
+            size="small"
+            :loading="job.__deleting"
+            @click="deleteJob(job)"
+          >
+            刪除
+          </el-button>
         </div>
       </el-card>
     </div>
@@ -111,8 +119,10 @@ const {
   jobTypeLabel,
   formatJobTime,
   formatDateTime,
+  jobStatusLabel,
   toggleJobStatus,
   editJob,
+  deleteJob,
   hideAddJobForm,
   submitJobForm,
   jobFormSubmitLabel,

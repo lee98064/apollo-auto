@@ -102,11 +102,17 @@ export default class TelegramController {
     const tokenId = parseTokenId(req.params.tokenId)
     const { message } = req.body
 
-    await this.telegramService.sendTestMessage({
-      userId: user.id,
-      tokenId,
-      message,
-    })
+    // For debug
+    try {
+      await this.telegramService.sendTestMessage({
+        userId: user.id,
+        tokenId,
+        message,
+      })
+    } catch (error) {
+      console.log(error)
+      throw new BadRequestError('發送測試消息失敗。')
+    }
 
     res.json(createSuccessResponse({ sent: true }))
   }

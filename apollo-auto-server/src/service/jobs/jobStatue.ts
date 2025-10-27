@@ -59,7 +59,8 @@ const setJobStatus = async (): Promise<boolean> => {
       let nextExecutionAt = calculateNextExecutionAt(
         job.startAt,
         job.endAt,
-        now
+        now,
+        timeZone
       )
 
       if (alreadyExecutedToday) {

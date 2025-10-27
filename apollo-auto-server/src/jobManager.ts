@@ -18,6 +18,8 @@ class JobManager {
       env.COOKIE_REFRESH_JOB_SCHEDULE,
       refreshApolloCookies
     )
+
+    void this.bootstrapJobs()
   }
 
   async scheduleJob(
@@ -51,6 +53,26 @@ class JobManager {
     return job
   }
 
+  private async bootstrapJobs(): Promise<void> {
+    const startupOrder = ['REFRESH_APOLLO_COOKIES']
+
+    for (const key of startupOrder) {
+      try {
+        const executed = await this.execute(key)
+        if (!executed) {
+          console.warn(
+            `[Apollo-Scheduler] Startup execution skipped for ${key}.`
+          )
+        }
+      } catch (error) {
+        console.error(
+          `[Apollo-Scheduler] Failed to bootstrap job ${key}:`,
+          error instanceof Error ? error.message : error
+        )
+      }
+    }
+  }
+
   async execute(key: string): Promise<boolean> {
     const scheduledJob = this.scheduledJobs.find((job) => job.key === key)
 
@@ -63,19 +85,18 @@ class JobManager {
       return false
     }
 
-    this.jobStatus.set(key, true)
     try {
       await scheduledJob.job.invoke()
 
       return true
     } catch (error) {
       console.error(
-        `[Apollo-Scheduler] Error during manual job ${key} execution: ${error.message}`
+        `[Apollo-Scheduler] Error during manual job ${key} execution: ${
+          error instanceof Error ? error.message : error
+        }`
       )
 
       return false
-    } finally {
-      this.jobStatus.set(key, false)
     }
   }
 }
