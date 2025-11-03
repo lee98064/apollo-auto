@@ -598,6 +598,15 @@ components:
           type: string
           nullable: true
           description: Optional JSON string payload for the job.
+        weekdays:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+          nullable: true
+          description: Array of weekday numbers (0=Sunday, 6=Saturday). Null means all days are allowed.
+          example: [1, 2, 3, 4, 5]
         nextExecutionAt:
           type: string
           format: date-time
@@ -638,6 +647,15 @@ components:
           type: string
           nullable: true
           description: Optional JSON string payload for the job.
+        weekdays:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+          nullable: true
+          description: Array of weekday numbers (0=Sunday, 6=Saturday). Null means all days are allowed.
+          example: [1, 2, 3, 4, 5]
         isActive:
           type: boolean
         expiredAt:
@@ -662,6 +680,15 @@ components:
           type: string
           nullable: true
           description: Optional JSON string payload for the job.
+        weekdays:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+          nullable: true
+          description: Array of weekday numbers (0=Sunday, 6=Saturday). Null means all days are allowed.
+          example: [1, 2, 3, 4, 5]
         isActive:
           type: boolean
         expiredAt:

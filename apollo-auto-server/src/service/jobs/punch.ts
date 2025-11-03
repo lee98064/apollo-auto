@@ -4,6 +4,7 @@ import type { CalendarDay, CookieEntry, PunchResult } from 'utils/apollo'
 import { fetchCalendar, punch as requestPunch } from 'utils/apollo'
 import { parseCookies } from 'utils/cookies'
 import prisma from 'utils/prisma'
+import { isDateInAllowedWeekdays } from 'utils/weekdays'
 
 const telegramService = new TelegramService(prisma)
 
@@ -202,6 +203,10 @@ const executeJob = async (
 
     let calendarDay: CalendarDay | undefined
     const skipReasons: string[] = []
+
+    if (!isDateInAllowedWeekdays(executedAt, job.weekdays, timeZone)) {
+      skipReasons.push('weekday-not-allowed')
+    }
 
     if (config.skipHoliday || config.skipLeaves) {
       const calendar = await getCalendarForUser(

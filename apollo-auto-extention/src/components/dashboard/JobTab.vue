@@ -22,11 +22,14 @@
           <el-descriptions-item label="結束時間">
             {{ formatJobTime(job.endAt, '未設定') }}
           </el-descriptions-item>
-          <el-descriptions-item label="過期時間">
-            {{ job.expiredAt ? formatDateTime(job.expiredAt) : '未設定' }}
+          <el-descriptions-item label="執行星期">
+            {{ formatWeekdays(job.weekdays) }}
           </el-descriptions-item>
           <el-descriptions-item label="狀態">
             {{ jobStatusLabel(job) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="過期時間" :span="2">
+            {{ job.expiredAt ? formatDateTime(job.expiredAt) : '未設定' }}
           </el-descriptions-item>
         </el-descriptions>
 
@@ -80,6 +83,19 @@
               value-format="YYYY-MM-DDTHH:mm" placeholder="選擇日期時間" clearable />
           </el-form-item>
 
+          <el-form-item label="執行星期">
+            <el-checkbox-group v-model="store.jobForm.weekdays">
+              <el-checkbox :value="0">日</el-checkbox>
+              <el-checkbox :value="1">一</el-checkbox>
+              <el-checkbox :value="2">二</el-checkbox>
+              <el-checkbox :value="3">三</el-checkbox>
+              <el-checkbox :value="4">四</el-checkbox>
+              <el-checkbox :value="5">五</el-checkbox>
+              <el-checkbox :value="6">六</el-checkbox>
+            </el-checkbox-group>
+            <div class="form-item-hint">未選擇任何星期表示每天都執行</div>
+          </el-form-item>
+
           <el-form-item label="執行設定">
             <div class="job-switch-group">
               <label class="job-switch-row">
@@ -119,6 +135,7 @@ const {
   jobTypeLabel,
   formatJobTime,
   formatDateTime,
+  formatWeekdays,
   jobStatusLabel,
   toggleJobStatus,
   editJob,
@@ -198,5 +215,11 @@ const {
   gap: 8px;
   font-size: 14px;
   color: #4a4a4a;
+}
+
+.form-item-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #909399;
 }
 </style>
