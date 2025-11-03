@@ -1,9 +1,9 @@
 import { JobStatus, JobType, type Prisma } from '@prisma/client'
+import TelegramService from 'service/telegramService'
 import type { CalendarDay, CookieEntry, PunchResult } from 'utils/apollo'
 import { fetchCalendar, punch as requestPunch } from 'utils/apollo'
 import { parseCookies } from 'utils/cookies'
 import prisma from 'utils/prisma'
-import TelegramService from 'service/telegramService'
 
 const telegramService = new TelegramService(prisma)
 
