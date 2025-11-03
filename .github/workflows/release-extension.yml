@@ -1,0 +1,45 @@
+name: Build and Release Extension
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-extension:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: 'apollo-auto-extention/yarn.lock'
+
+      - name: Install dependencies
+        working-directory: apollo-auto-extention
+        run: yarn install --frozen-lockfile
+
+      - name: Build extension
+        working-directory: apollo-auto-extention
+        run: yarn build
+
+      - name: Create extension zip
+        working-directory: apollo-auto-extention
+        run: |
+          cd dist
+          zip -r ../apollo-auto-extension-${{ github.event.release.tag_name }}.zip .
+          cd ..
+
+      - name: Upload extension to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./apollo-auto-extention/apollo-auto-extension-${{ github.event.release.tag_name }}.zip
+          asset_name: apollo-auto-extension-${{ github.event.release.tag_name }}.zip
+          asset_content_type: application/zip
