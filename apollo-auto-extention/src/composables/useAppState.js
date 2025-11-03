@@ -159,6 +159,7 @@ export function useAppState() {
     formatJobTime,
     formatDateTime,
     formatExecutionInfo,
+    formatWeekdays,
     jobStatusLabel,
     maskSensitiveValue,
   }
@@ -583,6 +584,10 @@ async function submitJobForm() {
         skipHoliday: state.jobForm.skipHoliday,
         skipLeaves: state.jobForm.skipLeaves,
       }),
+      weekdays:
+        state.jobForm.weekdays && state.jobForm.weekdays.length > 0
+          ? state.jobForm.weekdays
+          : null,
     }
 
     const isEditing = state.editingJobId !== null
@@ -649,6 +654,21 @@ function editJob(job) {
 
   state.jobForm.skipHoliday = skipHoliday
   state.jobForm.skipLeaves = skipLeaves
+
+  if (job.weekdays) {
+    try {
+      const parsed =
+        typeof job.weekdays === 'string'
+          ? JSON.parse(job.weekdays)
+          : job.weekdays
+      state.jobForm.weekdays = Array.isArray(parsed) ? parsed : []
+    } catch (error) {
+      console.warn('Failed to parse job weekdays:', error)
+      state.jobForm.weekdays = []
+    }
+  } else {
+    state.jobForm.weekdays = []
+  }
 }
 
 async function deleteJob(job) {
@@ -1277,6 +1297,32 @@ function jobTypeLabel(type) {
   return type === 'CHECK_IN' ? '上班打卡' : '下班打卡'
 }
 
+function formatWeekdays(weekdaysJson) {
+  if (!weekdaysJson) {
+    return '每天'
+  }
+
+  try {
+    const weekdays =
+      typeof weekdaysJson === 'string'
+        ? JSON.parse(weekdaysJson)
+        : weekdaysJson
+
+    if (!Array.isArray(weekdays) || weekdays.length === 0) {
+      return '每天'
+    }
+
+    const dayNames = ['日', '一', '二', '三', '四', '五', '六']
+    const sorted = [...weekdays].sort((a, b) => a - b)
+    const names = sorted.map((day) => dayNames[day] || '?')
+
+    return names.join('、')
+  } catch (error) {
+    console.warn('Failed to parse weekdays:', error)
+    return '每天'
+  }
+}
+
 function maskSensitiveValue(value) {
   if (!value) {
     return '-'
@@ -1344,6 +1390,7 @@ function createJobFormState() {
     expireTime: '',
     skipHoliday: false,
     skipLeaves: false,
+    weekdays: [],
     isActive: true,
   }
 }

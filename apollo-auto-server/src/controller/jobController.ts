@@ -12,6 +12,7 @@ type CreateJobRequestBody = {
   isActive?: boolean
   expiredAt?: string | null
   data?: unknown
+  weekdays?: number[] | null
 }
 
 type UpdateJobRequestBody = Partial<CreateJobRequestBody>
@@ -97,6 +98,40 @@ const parseData = (value: unknown): string | null | undefined => {
   }
 }
 
+const parseWeekdays = (
+  value: number[] | null | undefined
+): string | null | undefined => {
+  if (typeof value === 'undefined') {
+    return undefined
+  }
+
+  if (value === null) {
+    return null
+  }
+
+  if (!Array.isArray(value)) {
+    throw new BadRequestError(
+      'Invalid weekdays value. Expected array of numbers.'
+    )
+  }
+
+  if (value.length === 0) {
+    throw new BadRequestError('Weekdays array cannot be empty.')
+  }
+
+  const uniqueWeekdays = [...new Set(value)]
+
+  for (const day of uniqueWeekdays) {
+    if (!Number.isInteger(day) || day < 0 || day > 6) {
+      throw new BadRequestError(
+        'Invalid weekday value. Must be integer between 0 and 6.'
+      )
+    }
+  }
+
+  return JSON.stringify(uniqueWeekdays.sort())
+}
+
 export default class JobController {
   constructor(private readonly jobService: JobService) {}
 
@@ -118,7 +153,8 @@ export default class JobController {
   ) => {
     const user = req.user
 
-    const { type, startAt, endAt, isActive, expiredAt, data } = req.body
+    const { type, startAt, endAt, isActive, expiredAt, data, weekdays } =
+      req.body
 
     const job = await this.jobService.createJob({
       userId: user.id,
@@ -128,6 +164,7 @@ export default class JobController {
       isActive,
       expiredAt: parseOptionalDate(expiredAt, 'expiredAt'),
       data: parseData(data),
+      weekdays: parseWeekdays(weekdays),
     })
 
     res.status(StatusCodes.CREATED).json(
@@ -145,7 +182,8 @@ export default class JobController {
 
     const jobId = parseJobId(req.params.jobId)
 
-    const { type, startAt, endAt, isActive, expiredAt, data } = req.body
+    const { type, startAt, endAt, isActive, expiredAt, data, weekdays } =
+      req.body
 
     if (
       typeof type === 'undefined' &&
@@ -153,7 +191,8 @@ export default class JobController {
       typeof endAt === 'undefined' &&
       typeof isActive === 'undefined' &&
       typeof expiredAt === 'undefined' &&
-      typeof data === 'undefined'
+      typeof data === 'undefined' &&
+      typeof weekdays === 'undefined'
     ) {
       throw new BadRequestError('No fields provided for update.')
     }
@@ -170,6 +209,7 @@ export default class JobController {
       isActive,
       expiredAt: parseOptionalDate(expiredAt, 'expiredAt'),
       data: parseData(data),
+      weekdays: parseWeekdays(weekdays),
     })
 
     res.json(

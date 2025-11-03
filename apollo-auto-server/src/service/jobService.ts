@@ -15,6 +15,7 @@ type CreateJobInput = {
   isActive?: boolean
   expiredAt?: Date | null
   data?: string | null
+  weekdays?: string | null
 }
 
 type UpdateJobInput = {
@@ -26,6 +27,7 @@ type UpdateJobInput = {
   isActive?: boolean
   expiredAt?: Date | null
   data?: string | null
+  weekdays?: string | null
 }
 
 export default class JobService {
@@ -46,6 +48,7 @@ export default class JobService {
     isActive,
     expiredAt,
     data,
+    weekdays,
   }: CreateJobInput): Promise<Job> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -69,6 +72,7 @@ export default class JobService {
         expiredAt: expiredAt ?? null,
         nextExecutionAt,
         data: data ?? null,
+        weekdays: weekdays ?? null,
       },
     })
   }
@@ -82,6 +86,7 @@ export default class JobService {
     isActive,
     expiredAt,
     data,
+    weekdays,
   }: UpdateJobInput): Promise<Job> {
     const existingJob = await this.prisma.job.findUnique({
       where: { id: jobId },
@@ -122,10 +127,15 @@ export default class JobService {
       updateData.data = data ?? null
     }
 
+    if (typeof weekdays !== 'undefined') {
+      updateData.weekdays = weekdays ?? null
+    }
+
     if (
       typeof startAt !== 'undefined' ||
       typeof endAt !== 'undefined' ||
-      typeof isActive !== 'undefined'
+      typeof isActive !== 'undefined' ||
+      typeof weekdays !== 'undefined'
     ) {
       const timeZone = existingJob.user?.timezone ?? 'UTC'
       const nextStartAt =

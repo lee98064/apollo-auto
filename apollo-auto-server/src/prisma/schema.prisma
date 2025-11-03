@@ -79,6 +79,7 @@ model Job {
   startAt             String     @db.Char(5)
   endAt               String?    @db.Char(5)
   data                String? // JSON string
+  weekdays            String? // JSON array of weekday numbers (0=Sunday, 6=Saturday), null means all days
   nextExecutionAt     DateTime?
   lastExecutedAt      DateTime?
   lastExecutionStatus JobStatus?

@@ -1,6 +1,7 @@
-import type { Job, Prisma } from '@prisma/client'
-import prisma from 'utils/prisma'
+import type { Prisma } from '@prisma/client'
 import { calculateNextExecutionAt } from 'utils/jobTime'
+import prisma from 'utils/prisma'
+import { getNextDateInAllowedWeekdays } from 'utils/weekdays'
 
 // const shouldUpdateJob = (job: Job, now: Date): boolean =>
 //   job.nextExecutionAt <= now
@@ -30,8 +31,7 @@ const hasExecutedToday = (job: ActiveJob, now: Date): boolean => {
   const timeZone = job.user?.timezone ?? DEFAULT_TIMEZONE
 
   return (
-    formatDateKey(job.lastExecutedAt, timeZone) ===
-    formatDateKey(now, timeZone)
+    formatDateKey(job.lastExecutedAt, timeZone) === formatDateKey(now, timeZone)
   )
 }
 
@@ -73,10 +73,26 @@ const setJobStatus = async (): Promise<boolean> => {
         nextExecutionAt = adjustedExecution
       }
 
-      await prisma.job.update({
-        where: { id: job.id },
-        data: { nextExecutionAt },
-      })
+      const finalExecutionDate = getNextDateInAllowedWeekdays(
+        nextExecutionAt,
+        job.weekdays,
+        timeZone
+      )
+
+      if (!finalExecutionDate) {
+        console.warn(
+          `[Apollo-CheckIn] Job ${job.id} has no valid weekdays in the next 14 days. Setting nextExecutionAt to null.`
+        )
+        await prisma.job.update({
+          where: { id: job.id },
+          data: { nextExecutionAt: null },
+        })
+      } else {
+        await prisma.job.update({
+          where: { id: job.id },
+          data: { nextExecutionAt: finalExecutionDate },
+        })
+      }
 
       return job.id
     })
